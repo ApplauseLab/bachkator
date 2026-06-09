@@ -1,0 +1,3 @@
+# Unified Target Model
+
+Bachkator uses one canonical **Target** abstraction with kind-specific facets for metadata, runtime, cache, command, image, pipeline, quality, and completion contracts. This keeps shared behavior such as dependency planning, risk inheritance, cache evidence, tool checks, preflights, logs, run records, and quality handling in one model while still allowing shell, image, and pipeline targets to expose distinct fields. Separate ShellTarget/ImageTarget/PipelineTarget domain types should only be introduced if a target kind develops a genuinely different lifecycle that cannot share the normal target planning and run semantics.

@@ -1,0 +1,304 @@
+# vim: set ft=hcl :
+
+# Example: AI engineering delivery graph for dependent feature agents.
+#
+# The default program composes agent lanes instead of inlining every worker:
+#
+# - feature 1: foundation agent builds the prerequisite branch
+# - features 2-4: parallel feature agents, then merge agents 2-4 serialize integration
+# - features 5-8: parallel feature agents, then merge agents 5-8 serialize integration
+# - regression agent: deterministic post-merge verification gate
+# - long-running loop: resumable maintenance agent with a checkpoint and explicit gates
+#
+# Dry-run without launching agents:
+#
+#   go run ./cmd/bach -f examples/plan-agents/Bachfile --dry-run run pipeline/delivery_program
+#   go run ./cmd/bach -f examples/plan-agents/Bachfile --dry-run run shell/long-running-agent-loop
+
+project "plan-agent-orchestration" {
+  root    = "."
+  default = "pipeline.delivery_program"
+  state   = ".bach/plan-agent-orchestration.db"
+}
+
+env {
+  PLAN_VERIFICATION_FILE = "examples/plan-agents/Bachfile.verification"
+  PLAN_LOG_DIR           = ".bach/agent-runs"
+  MERGE_LOG_DIR          = ".bach/merge-runs"
+}
+
+input "file" "plan_sources" {
+  srcs = [
+    "examples/plan-agents/Bachfile",
+    "examples/plan-agents/Bachfile.verification",
+    "examples/plan-agents/scripts",
+    "go.mod",
+    "go.sum",
+    "cmd",
+    "internal",
+    "docs",
+    "examples",
+  ]
+}
+
+shell "long-running-agent-loop" {
+  description           = "Long-running supervised agent loop for repo maintenance"
+  when                  = "for open-ended maintenance; dry-run first, then resume by checkpoint"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  timeout               = "8h"
+  lock                  = "agent-loop"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  preflights            = [{ name = "clean worktree", command = ["sh", "-c", "git diff --quiet && git diff --cached --quiet"], fix = "Commit or stash local changes before starting the loop." }]
+  command = [
+    "sh",
+    "examples/plan-agents/scripts/run-long-agent-loop.sh",
+    "repo-maintenance",
+    "Keep the repository green: inspect affected targets, run shell/lint and shell/test, update docs when behavior changes, and stop only with a clean worktree plus a concise handoff.",
+  ]
+  inputs = [input.file.plan_sources]
+}
+
+shell "feature-agent-1" {
+  description = "Feature agent 1: computed variables foundation"
+  when        = "first feature branch; unblocks downstream agents"
+  cost        = "medium"
+  tools       = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  preflights  = [{ name = "verification Bachfile", command = ["sh", "-c", "test -f examples/plan-agents/Bachfile.verification"] }]
+  command     = ["sh", "examples/plan-agents/scripts/run-plan-agent.sh", "1", "computed variables foundation", "shell/plan-1-acceptance"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "feature-agent-2" {
+  description = "Feature agent 2: ordered pipelines"
+  when        = "after merge agent 1 lands the foundation branch"
+  cost        = "medium"
+  tools       = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command     = ["sh", "examples/plan-agents/scripts/run-plan-agent.sh", "2", "ordered pipelines", "shell/plan-2-acceptance"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "feature-agent-3" {
+  description = "Feature agent 3: affected target suggestions"
+  when        = "after merge agent 1 lands the foundation branch"
+  cost        = "medium"
+  tools       = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command     = ["sh", "examples/plan-agents/scripts/run-plan-agent.sh", "3", "affected target suggestions", "shell/plan-3-acceptance"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "feature-agent-4" {
+  description = "Feature agent 4: environment profiles"
+  when        = "after merge agent 1 lands the foundation branch"
+  cost        = "medium"
+  tools       = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command     = ["sh", "examples/plan-agents/scripts/run-plan-agent.sh", "4", "environment profiles", "shell/plan-4-acceptance"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "feature-agent-5" {
+  description = "Feature agent 5: target explain and metadata"
+  when        = "after merge agents 2-4 land the core feature set"
+  cost        = "medium"
+  tools       = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command     = ["sh", "examples/plan-agents/scripts/run-plan-agent.sh", "5", "target explain and metadata", "shell/plan-5-acceptance"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "feature-agent-6" {
+  description = "Feature agent 6: Bun package graph plugin"
+  when        = "after merge agents 2-4 land the core feature set"
+  cost        = "medium"
+  tools       = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command     = ["sh", "examples/plan-agents/scripts/run-plan-agent.sh", "6", "Bun package graph plugin", "shell/plan-6-acceptance"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "feature-agent-7" {
+  description = "Feature agent 7: quiet target output"
+  when        = "after merge agents 2-4 land the core feature set"
+  cost        = "medium"
+  tools       = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command     = ["sh", "examples/plan-agents/scripts/run-plan-agent.sh", "7", "quiet target output", "shell/plan-7-acceptance"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "feature-agent-8" {
+  description = "Feature agent 8: target concurrency locks"
+  when        = "after merge agents 2-4 land the core feature set"
+  cost        = "medium"
+  tools       = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command     = ["sh", "examples/plan-agents/scripts/run-plan-agent.sh", "8", "target concurrency locks", "shell/plan-8-acceptance"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "core-feature-swarm" {
+  description = "Run feature agents 2, 3, and 4 in parallel"
+  depends_on  = [shell.feature-agent-2, shell.feature-agent-3, shell.feature-agent-4]
+}
+
+shell "extension-feature-swarm" {
+  description = "Run feature agents 5, 6, 7, and 8 in parallel"
+  depends_on  = [shell.feature-agent-5, shell.feature-agent-6, shell.feature-agent-7, shell.feature-agent-8]
+}
+
+shell "feature-swarm-all" {
+  description = "Run every feature agent in parallel without merging"
+  depends_on = [
+    shell.feature-agent-1,
+    shell.feature-agent-2,
+    shell.feature-agent-3,
+    shell.feature-agent-4,
+    shell.feature-agent-5,
+    shell.feature-agent-6,
+    shell.feature-agent-7,
+    shell.feature-agent-8,
+  ]
+}
+
+shell "verify-build-markers" {
+  description = "Verify all feature agents emitted readiness markers"
+  command     = ["sh", "examples/plan-agents/scripts/verify-plan-markers.sh", "1", "2", "3", "4", "5", "6", "7", "8"]
+  inputs      = [input.file.plan_sources]
+}
+
+shell "merge-agent-1" {
+  description           = "Merge agent 1: integrate bach/plan-1"
+  when                  = "after shell/feature-agent-1"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  lock                  = "git-merge"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command               = ["sh", "examples/plan-agents/scripts/run-merge-agent.sh", "1"]
+  inputs                = [input.file.plan_sources]
+}
+
+shell "merge-agent-2" {
+  description           = "Merge agent 2: integrate bach/plan-2"
+  when                  = "after shell/core-feature-swarm"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  lock                  = "git-merge"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command               = ["sh", "examples/plan-agents/scripts/run-merge-agent.sh", "2"]
+  inputs                = [input.file.plan_sources]
+}
+
+shell "merge-agent-3" {
+  description           = "Merge agent 3: integrate bach/plan-3"
+  when                  = "after shell/merge-agent-2"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  lock                  = "git-merge"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command               = ["sh", "examples/plan-agents/scripts/run-merge-agent.sh", "3"]
+  inputs                = [input.file.plan_sources]
+}
+
+shell "merge-agent-4" {
+  description           = "Merge agent 4: integrate bach/plan-4"
+  when                  = "after shell/merge-agent-3"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  lock                  = "git-merge"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command               = ["sh", "examples/plan-agents/scripts/run-merge-agent.sh", "4"]
+  inputs                = [input.file.plan_sources]
+}
+
+shell "merge-agent-5" {
+  description           = "Merge agent 5: integrate bach/plan-5"
+  when                  = "after shell/extension-feature-swarm"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  lock                  = "git-merge"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command               = ["sh", "examples/plan-agents/scripts/run-merge-agent.sh", "5"]
+  inputs                = [input.file.plan_sources]
+}
+
+shell "merge-agent-6" {
+  description           = "Merge agent 6: integrate bach/plan-6"
+  when                  = "after shell/merge-agent-5"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  lock                  = "git-merge"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command               = ["sh", "examples/plan-agents/scripts/run-merge-agent.sh", "6"]
+  inputs                = [input.file.plan_sources]
+}
+
+shell "merge-agent-7" {
+  description           = "Merge agent 7: integrate bach/plan-7"
+  when                  = "after shell/merge-agent-6"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  lock                  = "git-merge"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command               = ["sh", "examples/plan-agents/scripts/run-merge-agent.sh", "7"]
+  inputs                = [input.file.plan_sources]
+}
+
+shell "merge-agent-8" {
+  description           = "Merge agent 8: integrate bach/plan-8"
+  when                  = "after shell/merge-agent-7"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  lock                  = "git-merge"
+  tools                 = [{ name = "opencode", command = ["opencode", "--version"], fix = "Install or authenticate OpenCode." }]
+  command               = ["sh", "examples/plan-agents/scripts/run-merge-agent.sh", "8"]
+  inputs                = [input.file.plan_sources]
+}
+
+shell "final-regression" {
+  description = "Regression agent: verify the integrated mainline"
+  command     = ["go", "run", "./cmd/bach", "-f", "examples/plan-agents/Bachfile.verification", "pipeline/all-plan-tests"]
+  inputs      = [input.file.plan_sources]
+}
+
+pipeline "foundation-lane" {
+  description = "Feature agent 1 plus merge agent 1"
+  steps       = [shell.feature-agent-1, shell.merge-agent-1]
+}
+
+pipeline "core-merge-lane" {
+  description = "Feature agents 2-4 in parallel, then merge agents 2-4"
+  steps       = [shell.core-feature-swarm, shell.merge-agent-2, shell.merge-agent-3, shell.merge-agent-4]
+}
+
+pipeline "extension-merge-lane" {
+  description = "Feature agents 5-8 in parallel, then merge agents 5-8"
+  steps       = [shell.extension-feature-swarm, shell.merge-agent-5, shell.merge-agent-6, shell.merge-agent-7, shell.merge-agent-8]
+}
+
+pipeline "delivery_program" {
+  description = "Compose agent lanes into a merge-safe delivery program"
+  steps       = [pipeline.foundation-lane, pipeline.core-merge-lane, pipeline.extension-merge-lane, shell.final-regression]
+}
+
+alias "build-features" {
+  target = "shell.feature-swarm-all"
+}
+
+alias "ship-features" {
+  target      = "pipeline.delivery_program"
+  deprecated = "Use pipeline.delivery_program."
+}

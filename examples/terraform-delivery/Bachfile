@@ -1,0 +1,259 @@
+# vim: set ft=hcl :
+
+# Self-contained Bachfile showcase for a Terraform delivery workflow.
+#
+# Demo commands:
+#
+#   go run ./cmd/bach -f examples/terraform-delivery/Bachfile list --aliases
+#   go run ./cmd/bach -f examples/terraform-delivery/Bachfile --dry-run run shell/local_check
+#   go run ./cmd/bach -f examples/terraform-delivery/Bachfile run shell/local_check
+#   go run ./cmd/bach -f examples/terraform-delivery/Bachfile explain deploy-infra
+#
+# The local check flow writes deterministic fixture artifacts under
+# $(RUN_DIRECTORY). The publish target is deliberately marked remote,
+# destructive, and confirmation-protected.
+
+project "terraform-delivery" {
+  root    = "."
+  default = "pipeline.deploy_infra"
+  state   = ".bach/terraform-delivery.db"
+}
+
+var "environment" {
+  default = "dev"
+}
+
+var "release_version" {
+  default = "v0.0.0-dev"
+}
+
+var "image_tag" {
+  default = "${git_short_sha()}${git_dirty_suffix()}"
+}
+
+var "dependency_fingerprint" {
+  default = "deps-${file_hash("go.mod", "go.sum")}"
+}
+
+env {
+  TF_IN_AUTOMATION = "1"
+  TF_INPUT         = "0"
+  TF_WORKSPACE     = var.environment
+  RELEASE_VERSION  = var.release_version
+  RUNNER_IMAGE_TAG = var.image_tag
+}
+
+profile "staging" {
+  env {
+    TF_WORKSPACE = "staging"
+    CLOUD_REGION = "eu-west-1"
+  }
+}
+
+profile "production" {
+  env {
+    TF_WORKSPACE = "production"
+    CLOUD_REGION = "eu-central-1"
+  }
+}
+
+input "file" "iac_sources" {
+  srcs = [
+    "Bachfile",
+    "go.mod",
+    "docs/reference/34-quality-reports.md",
+  ]
+}
+
+input "file" "release_inputs" {
+  srcs = ["go.mod", "go.sum", "Bachfile"]
+}
+
+resource "terraform_plan" {}
+resource "quality_evidence" {}
+resource "runner_image" {}
+
+# Graph-load plugin seam: plugins can add inputs and patch existing targets.
+# This command emits JSON only, so graph loading has no external side effects.
+plugin "iac_graph" {
+  command = [
+    "sh",
+    "-c",
+    "printf '%s\n' '{\"inputs\":{\"referenced_modules\":[\"docs/reference/34-quality-reports.md\"]},\"targets\":{\"shell.terraform_validate\":{\"depends_on\":[\"shell.terraform_plan\"],\"inputs\":[\"docs/reference/34-quality-reports.md\"]}}}'",
+  ]
+  sources = {
+    referenced_modules = ["docs/reference/*.md"]
+  }
+}
+
+shell "terraform_plan" {
+  description = "Create a Terraform plan artifact"
+  when        = "before validation, policy checks, and approval"
+  cost        = "low"
+  lock        = "terraform-state"
+
+  env {
+    PLAN_FILE = "tfplan-${TF_WORKSPACE}.bin"
+  }
+
+  command = [
+    "sh",
+    "-c",
+    "mkdir -p \"$(RUN_DIRECTORY)\" && printf 'plan ok for %s\n' \"$TF_WORKSPACE\" > \"$(RUN_DIRECTORY)/plan.txt\" && printf 'PLAN_CREATED\n'",
+  ]
+  inputs   = [input.file.iac_sources]
+  outputs  = { plan = "$(RUN_DIRECTORY)/plan.txt" }
+  produces = [resource.terraform_plan]
+
+  success_when {
+    output_contains = "PLAN_CREATED"
+  }
+
+  success_when {
+    file_exists = "docs/reference/34-quality-reports.md"
+  }
+}
+
+shell "terraform_validate" {
+  description = "Validate Terraform configuration and module references"
+  when        = "after shell/terraform_plan"
+  cost        = "low"
+  quiet       = true
+  lock        = "terraform-state"
+  workdir     = "."
+  inputs      = [resource.terraform_plan, plugin.iac_graph.referenced_modules]
+
+  tools = [
+    { name = "sh", command = ["sh", "-c", "command -v sh"], version = "POSIX shell" },
+  ]
+
+  preflights = [
+    { name = "quality docs present", command = ["sh", "-c", "test -f docs/reference/34-quality-reports.md"], fix = "Run from the Bachkator repository root." },
+  ]
+
+  command = ["sh", "-c", "printf 'terraform validate ok for %s\n' \"$TF_WORKSPACE\""]
+
+  fail_when {
+    output_contains = "VALIDATION_ERROR"
+  }
+}
+
+shell "policy_check" {
+  description = "Run policy, test, coverage, and lint checks against the plan"
+  depends_on  = [shell.terraform_validate]
+  cost        = "medium"
+  inputs      = [resource.terraform_plan, input.file.iac_sources]
+  outputs = {
+    junit = "$(RUN_DIRECTORY)/junit.xml"
+    cover = "$(RUN_DIRECTORY)/coverage.out"
+    lint  = "$(RUN_DIRECTORY)/checkstyle.xml"
+  }
+  produces = [resource.quality_evidence]
+
+  command = [
+    "sh",
+    "-c",
+    "mkdir -p \"$(RUN_DIRECTORY)\" && printf '%s\n' '<?xml version=\"1.0\" encoding=\"UTF-8\"?>' '<testsuite name=\"iac-policy\" tests=\"2\" failures=\"0\" errors=\"0\" skipped=\"0\" time=\"0.30\">' '  <testcase classname=\"policy\" name=\"plan-has-no-drift\" time=\"0.10\" />' '  <testcase classname=\"policy\" name=\"required-tags\" time=\"0.20\" />' '</testsuite>' > \"$(RUN_DIRECTORY)/junit.xml\" && printf '%s\n' 'mode: set' 'main.tf:1.1,2.1 2 1' 'main.tf:3.1,4.1 2 1' > \"$(RUN_DIRECTORY)/coverage.out\" && printf '%s\n' '<?xml version=\"1.0\" encoding=\"UTF-8\"?>' '<checkstyle version=\"8.0\">' '  <file name=\"main.tf\">' '    <error line=\"12\" severity=\"warning\" message=\"example advisory\" source=\"terraform.fmt\" />' '  </file>' '</checkstyle>' > \"$(RUN_DIRECTORY)/checkstyle.xml\" && printf 'POLICY_EVIDENCE_READY\n'",
+  ]
+
+  fail_when {
+    output_contains = "panic:"
+  }
+
+  success_when {
+    output_contains = "POLICY_EVIDENCE_READY"
+  }
+
+  success_when {
+    command = ["sh", "-c", "test -s \"$BACH_RUN_DIRECTORY/junit.xml\" && test -s \"$BACH_RUN_DIRECTORY/coverage.out\" && test -s \"$BACH_RUN_DIRECTORY/checkstyle.xml\""]
+  }
+}
+
+quality "shell.policy_check" {
+  junit {
+    path = shell.policy_check.outputs.junit
+  }
+
+  cov {
+    format = "go-cover"
+    path   = shell.policy_check.outputs.cover
+  }
+
+  lint {
+    format = "checkstyle-xml"
+    path   = shell.policy_check.outputs.lint
+  }
+
+  quality_gate {
+    metric = "tests.failed"
+    max    = 0
+  }
+
+  quality_gate {
+    metric = "coverage.line.percent"
+    min    = 80
+  }
+
+  quality_gate {
+    metric = "issues.warning.count"
+    max    = 1
+  }
+}
+
+image "runner" {
+  description = "Build an example infrastructure runner image command"
+  when        = "after policy gates pass"
+  cost        = "medium"
+  lock        = "container-builder"
+  builder     = "echo"
+  image       = "example/infra-runner"
+  tags        = [var.image_tag, "latest"]
+  dockerfile  = "Dockerfile"
+  context     = "."
+  platform    = "linux/amd64"
+  push        = false
+  build_args = {
+    RELEASE_VERSION = var.release_version
+    DEPS            = var.dependency_fingerprint
+  }
+  inputs   = [input.file.release_inputs, resource.quality_evidence]
+  produces = [resource.runner_image]
+}
+
+shell "publish_plan" {
+  description           = "Publish approved plan evidence to the deployment system"
+  when                  = "after all local checks pass and human approval is recorded"
+  cost                  = "high"
+  remote                = true
+  destructive           = true
+  requires_confirmation = true
+  depends_on            = [image.runner]
+  inputs                = [resource.terraform_plan, resource.quality_evidence, resource.runner_image]
+
+  command = ["sh", "-c", "printf 'publish %s for %s\n' \"$RELEASE_VERSION\" \"$TF_WORKSPACE\""]
+}
+
+pipeline "deploy_infra" {
+  description = "Plan, validate, check policy, build runner image, and publish approved evidence"
+  steps = [
+    shell.terraform_plan,
+    shell.terraform_validate,
+    shell.policy_check,
+    image.runner,
+    shell.publish_plan,
+  ]
+}
+
+shell "local_check" {
+  description = "Aggregate target for local IaC checks"
+  depends_on  = [shell.terraform_plan, shell.terraform_validate, shell.policy_check]
+}
+
+alias "deploy-infra" {
+  target      = "pipeline.deploy_infra"
+  deprecated = "Use pipeline.deploy_infra."
+}
+
+alias "check-infra" {
+  target = "shell.local_check"
+}

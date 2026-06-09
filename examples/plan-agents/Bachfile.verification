@@ -1,0 +1,73 @@
+# vim: set ft=hcl :
+
+project "plan-agent-verification" {
+  root    = "."
+  default = "pipeline.all-plan-tests"
+  state   = ".bach/plan-agent-verification.db"
+}
+
+input "file" "repo_sources" {
+  srcs = ["go.mod", "go.sum", "cmd", "internal", "docs", "examples"]
+}
+
+shell "plan-1-acceptance" {
+  description = "Acceptance gate for plan 1"
+  command     = ["go", "test", "./internal/build"]
+  inputs      = [input.file.repo_sources]
+}
+
+shell "plan-2-acceptance" {
+  description = "Acceptance gate for plan 2"
+  command     = ["go", "test", "./internal/cli"]
+  inputs      = [input.file.repo_sources]
+}
+
+shell "plan-3-acceptance" {
+  description = "Acceptance gate for plan 3"
+  command     = ["go", "test", "./docs"]
+  inputs      = [input.file.repo_sources]
+}
+
+shell "plan-4-acceptance" {
+  description = "Acceptance gate for plan 4"
+  command     = ["go", "test", "./examples/plugins"]
+  inputs      = [input.file.repo_sources]
+}
+
+shell "plan-5-acceptance" {
+  description = "Acceptance gate for plan 5"
+  command     = ["go", "test", "./internal/build", "./internal/cli"]
+  inputs      = [input.file.repo_sources]
+}
+
+shell "plan-6-acceptance" {
+  description = "Acceptance gate for plan 6"
+  command     = ["go", "test", "./..."]
+  inputs      = [input.file.repo_sources]
+}
+
+shell "plan-7-acceptance" {
+  description = "Acceptance gate for plan 7"
+  command     = ["go", "test", "./..."]
+  inputs      = [input.file.repo_sources]
+}
+
+shell "plan-8-acceptance" {
+  description = "Acceptance gate for plan 8"
+  command     = ["go", "test", "./..."]
+  inputs      = [input.file.repo_sources]
+}
+
+pipeline "all-plan-tests" {
+  description = "Run all plan acceptance gates"
+  steps = [
+    shell.plan-1-acceptance,
+    shell.plan-2-acceptance,
+    shell.plan-3-acceptance,
+    shell.plan-4-acceptance,
+    shell.plan-5-acceptance,
+    shell.plan-6-acceptance,
+    shell.plan-7-acceptance,
+    shell.plan-8-acceptance,
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@app/api",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@app/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@app/test-utils": "workspace:*"
+  }
+}
