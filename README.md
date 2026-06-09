@@ -66,6 +66,8 @@ bach runs
 
 ## 🧱 Bachfile in one screen
 
+Or run agentic loops: [examples/plan-agents](https://github.com/ApplauseLab/bachkator/tree/main/examples/plan-agents).
+
 ```hcl
 # vim: set ft=hcl :
 
