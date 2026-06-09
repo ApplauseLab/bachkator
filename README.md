@@ -50,20 +50,6 @@ Or build from source:
 go build -o bach ./cmd/bach
 ```
 
-Then, inside a project with a `Bachfile`:
-
-```sh
-bach list
-bach explain shell/test
-bach affected
-bach --dry-run run shell/lint
-bach run shell/lint
-bach --dry-run run shell/test
-bach -j 8 run shell/test
-bach quality summary
-bach runs
-```
-
 ## 🧱 Bachfile in one screen
 
 Or run agentic loops: [examples/plan-agents](https://github.com/ApplauseLab/bachkator/tree/main/examples/plan-agents).
@@ -142,6 +128,20 @@ shell "build" {
 pipeline "ci" {
   steps = ["shell/lint", "shell/test", "shell/build"]
 }
+```
+
+Then, inside a project with a `Bachfile`:
+
+```sh
+bach list
+bach explain shell/test
+bach affected
+bach --dry-run run shell/lint
+bach run shell/lint
+bach --dry-run run shell/test
+bach -j 8 run shell/test
+bach quality summary
+bach runs
 ```
 
 ## 🧠 The mental model

@@ -24,7 +24,11 @@ env {
 }
 
 input "file" "go_sources" {
-	 srcs = ["go.mod", "go.sum", ".golangci.yml", "cmd", "internal", "docs", "README.md", "install.sh"]
+  srcs = ["go.mod", "go.sum", ".golangci.yml", "cmd", "internal", "docs", "README.md", "install.sh"]
+}
+
+input "file" "release_sources" {
+  srcs = [input.file.go_sources, "scripts/build-release-archive.sh"]
 }
 
 shell "docs-generate" {
@@ -98,12 +102,8 @@ shell "build-release-darwin-amd64" {
     GOARCH      = "amd64"
     GOOS        = "darwin"
   }
-  command = [
-    "sh",
-    "-c",
-    "rm -rf dist/release/bachkator_darwin_amd64 dist/bachkator_darwin_amd64.tar.gz && mkdir -p dist/release/bachkator_darwin_amd64 && go build -ldflags \"-X main.version=${BACH_VERSION}\" -o dist/release/bachkator_darwin_amd64/bach ./cmd/bach && tar -C dist/release/bachkator_darwin_amd64 -czf dist/bachkator_darwin_amd64.tar.gz bach",
-  ]
-  inputs  = [input.file.go_sources]
+  command = ["sh", "scripts/build-release-archive.sh"]
+  inputs  = [input.file.release_sources]
   outputs = ["dist/bachkator_darwin_amd64.tar.gz"]
 }
 
@@ -114,12 +114,8 @@ shell "build-release-darwin-arm64" {
     GOARCH      = "arm64"
     GOOS        = "darwin"
   }
-  command = [
-    "sh",
-    "-c",
-    "rm -rf dist/release/bachkator_darwin_arm64 dist/bachkator_darwin_arm64.tar.gz && mkdir -p dist/release/bachkator_darwin_arm64 && go build -ldflags \"-X main.version=${BACH_VERSION}\" -o dist/release/bachkator_darwin_arm64/bach ./cmd/bach && tar -C dist/release/bachkator_darwin_arm64 -czf dist/bachkator_darwin_arm64.tar.gz bach",
-  ]
-  inputs  = [input.file.go_sources]
+  command = ["sh", "scripts/build-release-archive.sh"]
+  inputs  = [input.file.release_sources]
   outputs = ["dist/bachkator_darwin_arm64.tar.gz"]
 }
 
@@ -130,12 +126,8 @@ shell "build-release-linux-amd64" {
     GOARCH      = "amd64"
     GOOS        = "linux"
   }
-  command = [
-    "sh",
-    "-c",
-    "rm -rf dist/release/bachkator_linux_amd64 dist/bachkator_linux_amd64.tar.gz && mkdir -p dist/release/bachkator_linux_amd64 && go build -ldflags \"-X main.version=${BACH_VERSION}\" -o dist/release/bachkator_linux_amd64/bach ./cmd/bach && tar -C dist/release/bachkator_linux_amd64 -czf dist/bachkator_linux_amd64.tar.gz bach",
-  ]
-  inputs  = [input.file.go_sources]
+  command = ["sh", "scripts/build-release-archive.sh"]
+  inputs  = [input.file.release_sources]
   outputs = ["dist/bachkator_linux_amd64.tar.gz"]
 }
 
@@ -146,12 +138,8 @@ shell "build-release-linux-arm64" {
     GOARCH      = "arm64"
     GOOS        = "linux"
   }
-  command = [
-    "sh",
-    "-c",
-    "rm -rf dist/release/bachkator_linux_arm64 dist/bachkator_linux_arm64.tar.gz && mkdir -p dist/release/bachkator_linux_arm64 && go build -ldflags \"-X main.version=${BACH_VERSION}\" -o dist/release/bachkator_linux_arm64/bach ./cmd/bach && tar -C dist/release/bachkator_linux_arm64 -czf dist/bachkator_linux_arm64.tar.gz bach",
-  ]
-  inputs  = [input.file.go_sources]
+  command = ["sh", "scripts/build-release-archive.sh"]
+  inputs  = [input.file.release_sources]
   outputs = ["dist/bachkator_linux_arm64.tar.gz"]
 }
 
