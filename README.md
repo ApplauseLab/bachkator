@@ -160,7 +160,7 @@ Bachkator does not replace your language tooling. It wraps it in a shared CLI Co
 
 Bachkator works with any agent because it is just a CLI plus files in your repo. Use it from Claude Code, OpenCode, Codex, Cursor, CI, a shell script, or a human terminal.
 
-[Claude Code dynamic workflows](https://code.claude.com/docs/en/workflows.md) are powerful: Claude writes a JavaScript script, the workflow runtime runs it in the background, and that script can orchestrate many subagents for audits, migrations, and cross-checked research. Bachkator complements that model by giving every workflow a durable repository contract to call.
+[Claude Code dynamic workflows](https://code.claude.com/docs/en/workflows) are powerful: Claude writes a JavaScript script, the workflow runtime runs it in the background, and that script can orchestrate many subagents for audits, migrations, and cross-checked research. Bachkator complements that model by giving every workflow a durable repository contract to call.
 
 | Need | Claude dynamic workflows | Bachkator |
 | --- | --- | --- |
@@ -240,6 +240,8 @@ bach quality gates
 - 📖 [Reference](docs/reference.md): CLI flags, Bachfile syntax, Targets, Inputs, Resources, quality reports, plugins, state, logs, and Git environment.
 - 🤖 [Agent Guide](docs/agents.md): how agents discover, dry-run, execute, and inspect project operations.
 - 🧭 [Product Context](CONTEXT.md): domain language and architecture direction.
+- 🤝 [Contributing](CONTRIBUTING.md): development workflow, docs rules, and release checklist.
+- ⚖️ [License](LICENSE): MIT License, copyright 2026 ApplauseLab.
 
 The binary embeds the reference docs:
 
