@@ -173,10 +173,6 @@ func targetStaleReasons(
 				record.FingerprintParts["dependencies"] != parts["dependencies"] {
 				reasons = append(reasons, "dependency fingerprint change")
 			}
-			if record.FingerprintParts["git"] != "" &&
-				record.FingerprintParts["git"] != parts["git"] {
-				reasons = append(reasons, "dirty Git state")
-			}
 		}
 	}
 	for _, output := range target.Outputs {
@@ -207,7 +203,6 @@ func dedupeStrings(values []string) []string {
 func targetFingerprintParts(
 	project *Project,
 	target *Target,
-	gitContext GitContext,
 	dotenv map[string]string,
 	dependencyFingerprints map[string]string,
 ) (string, map[string]string, error) {
@@ -245,15 +240,6 @@ func targetFingerprintParts(
 		writeHash(envHash, "dotenv", key+"="+dotenv[key])
 	}
 	parts["env"] = hex.EncodeToString(envHash.Sum(nil))
-
-	gitHash := sha256.New()
-	writeHash(gitHash, "git-branch", gitContext.Branch)
-	writeHash(gitHash, "git-commit", gitContext.Commit)
-	writeHash(gitHash, "git-dirty", fmt.Sprint(gitContext.Dirty))
-	writeHash(gitHash, "git-staged", strings.Join(gitContext.StagedFiles, "\x00"))
-	writeHash(gitHash, "git-unstaged", strings.Join(gitContext.UnstagedFiles, "\x00"))
-	writeHash(gitHash, "git-untracked", strings.Join(gitContext.Untracked, "\x00"))
-	parts["git"] = hex.EncodeToString(gitHash.Sum(nil))
 
 	inputHash := sha256.New()
 	writeHash(inputHash, "inputs", strings.Join(spec.Cache.Inputs, "\x00"))

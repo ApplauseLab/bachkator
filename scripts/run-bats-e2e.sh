@@ -1,10 +1,10 @@
 #!/bin/sh
 set -eu
 
-BATS_BIN=${BATS_BIN:-tools/bats-core/bin/bats}
+BATS_BIN=${BATS_BIN:-.bach/tools/bats-core/bin/bats}
 export BACH_E2E_BIN=${BACH_E2E_BIN:-"$(pwd)/dist/bach"}
 RUN_DIRECTORY=${BACH_RUN_DIRECTORY:-${RUN_DIRECTORY:-.bach/runs/e2e-local}}
-JUNIT_PATH=${BATS_JUNIT_PATH:-"$RUN_DIRECTORY/bats-junit.xml"}
+JUNIT_PATH=${BATS_JUNIT_PATH:-.bach/artifacts/bats-junit.xml}
 JUNIT_WORK_DIR="$RUN_DIRECTORY/bats-junit"
 
 if [ ! -x "$BATS_BIN" ]; then
@@ -20,7 +20,7 @@ fi
 failures=0
 pids=""
 
-mkdir -p "$JUNIT_WORK_DIR"
+mkdir -p "$JUNIT_WORK_DIR" "$(dirname "$JUNIT_PATH")"
 rm -f "$JUNIT_PATH"
 
 run_file() {

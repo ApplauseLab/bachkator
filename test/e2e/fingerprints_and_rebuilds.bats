@@ -53,7 +53,7 @@ HCL
 
   run bach run shell/build
   assert_success
-  assert_output_contains "[shell/build] up to date"
+  assert_output_contains "[shell/build] (cached)"
   assert_line_count "$E2E_PROJECT/runs.txt" "run" 1
 
   printf 'two\n' >"$E2E_PROJECT/input.txt"

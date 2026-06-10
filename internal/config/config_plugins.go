@@ -7,10 +7,65 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
+
+const (
+	pluginTypeGraph   = "graph"
+	pluginTypeQuality = "quality"
+)
+
+func registerPlugins(project *Project, plugins []*Plugin) error {
+	for _, plugin := range plugins {
+		if plugin == nil {
+			continue
+		}
+		if plugin.Type == "" {
+			plugin.Type = pluginTypeGraph
+		}
+		switch plugin.Type {
+		case pluginTypeGraph:
+			if plugin.Timeout != "" {
+				return fmt.Errorf("plugin %q graph plugins do not support timeout", plugin.Name)
+			}
+		case pluginTypeQuality:
+			if len(plugin.Sources) > 0 {
+				return fmt.Errorf("plugin %q quality plugins do not support sources", plugin.Name)
+			}
+			if len(plugin.Inputs) > 0 {
+				return fmt.Errorf("plugin %q quality plugins do not support inputs", plugin.Name)
+			}
+			if plugin.Timeout != "" {
+				timeout, err := time.ParseDuration(plugin.Timeout)
+				if err != nil {
+					return fmt.Errorf(
+						"plugin %q timeout %q is invalid: %w",
+						plugin.Name,
+						plugin.Timeout,
+						err,
+					)
+				}
+				if timeout <= 0 {
+					return fmt.Errorf("plugin %q timeout must be greater than zero", plugin.Name)
+				}
+				plugin.TimeoutDuration = timeout
+			}
+		default:
+			return fmt.Errorf("plugin %q has unsupported type %q", plugin.Name, plugin.Type)
+		}
+		if _, exists := project.Plugins[plugin.Name]; exists {
+			return fmt.Errorf("duplicate plugin %q", plugin.Name)
+		}
+		project.Plugins[plugin.Name] = plugin
+	}
+	return nil
+}
 
 func runPlugins(ctx context.Context, project *Project, plugins []*Plugin) error {
 	for _, plugin := range plugins {
+		if plugin == nil || plugin.Type == pluginTypeQuality {
+			continue
+		}
 		pluginContext, err := runPlugin(ctx, project, plugin)
 		if err != nil {
 			return err

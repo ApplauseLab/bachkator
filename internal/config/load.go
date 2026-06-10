@@ -84,6 +84,7 @@ func LoadWithOptions(path string, options LoadOptions) (*Project, error) {
 		Inputs:           make(map[string]*Input, len(cfg.Inputs)),
 		Resources:        make(map[string]*Resource, len(cfg.Resources)),
 		Producers:        map[string]string{},
+		Plugins:          make(map[string]*Plugin, len(cfg.Plugins)),
 		Targets: make(
 			map[string]*Target,
 			len(cfg.Shells)+len(cfg.Images)+len(cfg.Pipelines)+len(cfg.Groups),
@@ -104,6 +105,9 @@ func LoadWithOptions(path string, options LoadOptions) (*Project, error) {
 		cfg.Groups,
 		variables,
 	); err != nil {
+		return nil, err
+	}
+	if err := registerPlugins(project, cfg.Plugins); err != nil {
 		return nil, err
 	}
 	if err := registerQualityConfigs(project, cfg.Qualities); err != nil {

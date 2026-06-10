@@ -37,7 +37,7 @@ Supported flags:
 - `-yes`: confirm execution of targets marked `requires_confirmation = true`.
 - `-env-file <path>`: load target operation environment from this file after project `.env`.
 - `-profile <name>`: select an environment profile. May be repeated; later profiles win.
-- `-log-only`: write target progress and operation output only to `.bach/runs/.../*.log` files.
+- `-log-only`: suppress command stdout/stderr in the terminal while keeping Bach progress and quality progress visible; full output is still written to `.bach/runs/.../*.log` files.
 - `-j <n>`: maximum number of targets to run in parallel.
 - `-var name=value`: set a Bachkator variable. May be repeated.
 - `--json`: with `--dry-run run`, print a machine-readable execution plan.
@@ -75,8 +75,8 @@ Use top-level `alias` blocks to preserve old command names while directing users
 
 ```hcl
 alias "staging-kristiyan-deploy" {
-  target      = "pipeline/deploy-kristiyan"
-  deprecated = "Use pipeline/deploy-kristiyan."
+  target      = "pipeline.deploy-kristiyan"
+  deprecated = "Use pipeline.deploy-kristiyan."
 }
 ```
 
@@ -214,7 +214,7 @@ Every Bachfile needs one `project` block:
 ```hcl
 project "example" {
   root    = "."
-  default = "shell/test"
+  default = "shell.test"
   state   = ".bach/state.db"
 }
 ```
@@ -342,7 +342,7 @@ shell "build" {
   remote                = false
   destructive           = false
   requires_confirmation = false
-  depends_on            = ["shell/test"]
+  depends_on            = [shell.test]
   quiet                 = true
   lock                  = "container-builder"
   timeout               = "5m"
@@ -503,10 +503,10 @@ Pipeline targets run existing targets in a declared sequence. Use them for deplo
 pipeline "deploy-staging" {
   timeout = "15m"
   steps = [
-    "shell/render-staging",
-    "shell/apply-staging",
-    "shell/rollout-staging",
-    "shell/smoke-staging",
+    shell.render-staging,
+    shell.apply-staging,
+    shell.rollout-staging,
+    shell.smoke-staging,
   ]
 }
 ```
@@ -515,15 +515,15 @@ Pipeline steps may reference shell, image, or pipeline targets. Nested pipelines
 
 ```hcl
 pipeline "build-lane" {
-  steps = ["shell/build-a", "shell/build-b"]
+  steps = [shell.build-a, shell.build-b]
 }
 
 pipeline "merge-lane" {
-  steps = ["shell/merge-a", "shell/merge-b"]
+  steps = [shell.merge-a, shell.merge-b]
 }
 
 pipeline "delivery-program" {
-  steps = ["pipeline/build-lane", "pipeline/merge-lane", "shell/regression"]
+  steps = [pipeline.build-lane, pipeline.merge-lane, shell.regression]
 }
 ```
 
@@ -601,7 +601,7 @@ var "release_version" {
 }
 
 shell "github-release" {
-  depends_on = ["shell/build"]
+  depends_on = [shell.build]
   command = [
     "gh",
     "release",
@@ -630,10 +630,13 @@ bach -var release_version=v0.1.0 shell/github-release
 
 ## Plugins
 
-Plugins are external executables in any language. They run while loading the graph and emit JSON to stdout.
+Plugins are typed external executables in any language. The plugin `type` determines when Bachkator runs the executable and which stdout contract it must satisfy.
+
+Existing plugins default to `type = "graph"`. Graph plugins run while loading the Project and emit graph evidence JSON to stdout.
 
 ```hcl
 plugin "ts_imports" {
+  type    = "graph"
   command = ["bun", "examples/plugins/ts-import-graph.ts"]
   sources = {
     api_tests = ["packages/api/tests/**/*.test.ts"]
@@ -646,14 +649,14 @@ shell "test-api" {
 }
 ```
 
-Plugin environment:
+Graph plugin environment:
 
 - `BACH_PLUGIN_NAME`: plugin name.
 - `BACH_PROJECT_ROOT`: project root.
 - `BACH_PLUGIN_INPUTS`: resolved plugin input paths, newline-separated.
 - `BACH_PLUGIN_SOURCES`: JSON-encoded `sources` map.
 
-Plugin stdout contract:
+Graph plugin stdout contract:
 
 ```json
 {
@@ -661,17 +664,52 @@ Plugin stdout contract:
     "api_tests": ["packages/api/src/main.ts"]
   },
   "targets": {
-    "shell/test-api": {
-      "depends_on": ["shell/generated"],
+    "shell.test-api": {
+      "depends_on": ["shell.generated"],
       "inputs": ["generated.ts"]
     }
   }
 }
 ```
 
-Bachkator merges plugin-provided `depends_on` and `inputs` into existing targets before validation, fingerprinting, and scheduling.
+Bachkator merges graph plugin-provided `depends_on` and `inputs` into existing targets before validation, fingerprinting, and scheduling.
 
-Plugins should not perform side effects. They run on graph load, so `bach list` also runs plugins.
+Graph plugins should not perform side effects. They run on graph load, so `bach list` also runs graph plugins.
+
+Quality plugins use `type = "quality"`. They do not run while loading the graph. They run only after a target command succeeds and a quality report declaration references them with `parser = plugin.<name>`.
+
+```hcl
+plugin "eslint_quality" {
+  type    = "quality"
+  command = ["bun", "scripts/bach/parse-eslint-quality.ts"]
+  timeout = "10s"
+  env     = ["MODE=strict"]
+}
+```
+
+Quality plugins receive the report path as the first command argument and through environment metadata such as `BACH_QUALITY_REPORT_ABS_PATH`, `BACH_QUALITY_KIND`, `BACH_TARGET`, and `BACH_RUN_ID`. Stdout must contain only normalized quality JSON; stderr is diagnostics and is copied to the target log.
+
+See `examples/plugins/quality-parser` for a complete quality parser plugin example. The normalized stdout schema lives at `docs/schemas/quality-plugin-report.schema.json`.
+
+Quality plugin fields:
+
+- `command` or `shell`: parser executable. One is required; they are mutually exclusive.
+- `timeout`: optional parser timeout. Defaults to `30s`.
+- `env`: optional environment entries layered onto Bach's runtime environment.
+
+Quality plugins do not support `sources` or `inputs`. Graph plugins do not support `timeout`.
+
+Quality plugin environment:
+
+- `BACH_PLUGIN_NAME`: plugin name.
+- `BACH_PLUGIN_TYPE`: `quality`.
+- `BACH_PROJECT_ROOT`: project root.
+- `BACH_RUN_ID`: current run ID.
+- `BACH_RUN_DIRECTORY`: target run directory.
+- `BACH_TARGET`: target address being parsed, such as `shell/lint`.
+- `BACH_QUALITY_KIND`: report kind, such as `lint` or `tests`.
+- `BACH_QUALITY_REPORT_PATH`: report path as declared in the Bachfile after env expansion.
+- `BACH_QUALITY_REPORT_ABS_PATH`: absolute report path.
 
 ## TypeScript Import Graph Plugin
 
@@ -716,7 +754,6 @@ The fingerprint includes:
 - operation configuration.
 - target environment.
 - dependency fingerprints.
-- Git branch, commit, dirty state, and changed files.
 - resolved input file contents.
 - output existence.
 
@@ -724,7 +761,7 @@ Fingerprints are stored in SQLite table `target_state` in `.bach/state.db`.
 
 When a cacheable target is stale, Bach prints the cache invalidation reasons before the operation. Dry-run JSON includes the same values in `targets[].cache.reasons` so agents can inspect why a target will run without executing it.
 
-Stale reasons include changed inputs, changed environment, changed operation configuration, dependency fingerprint changes, missing outputs, dirty Git state, forced runs, missing cache records, and legacy fingerprint changes from older cache state.
+Stale reasons include changed inputs, changed environment, changed operation configuration, dependency fingerprint changes, missing outputs, forced runs, missing cache records, and legacy fingerprint changes from older cache state.
 
 ## Runs And Logs
 
@@ -745,7 +782,7 @@ run 20260608T120000.000000000Z success target=shell/test duration=1.2s logs=.bac
 targets: success=3 cached=2 failed=0 dry-run=0 running=0
 ```
 
-`-log-only` and `quiet = true` targets still suppress command output in the terminal, but the summary is printed so agents can report the outcome and log location. Failed runs include the last 20 non-empty lines from the first failed target log; successful runs do not print log excerpts.
+`-log-only` suppresses command stdout/stderr in the terminal while keeping Bach progress, quality progress, and the final summary visible. `quiet = true` targets suppress their command output and target progress unless `-verbose` is set. Full target output is still written to the target log so agents can report the outcome and log location. Failed runs include the last 20 non-empty lines from the first failed target log; successful runs do not print log excerpts.
 
 ## Git Environment
 
@@ -832,7 +869,7 @@ quality "lint" {
 }
 ```
 
-Unqualified quality targets default to shell targets, so `quality "test-api"` attaches to `shell/test-api`. Use `quality "image/build"` or `quality "pipeline/release"` when targeting other target types.
+Unqualified quality targets default to shell targets, so `quality "test-api"` attaches to `shell.test-api`. Use `quality "image.build"` or `quality "pipeline.release"` when targeting other target types.
 
 After the target operation exits successfully, Bachkator parses declared reports into the SQLite state database, then evaluates gates. A failing gate marks the target and run as `quality-failed`.
 
@@ -848,6 +885,58 @@ Supported initial formats:
 - `codecov-json`: coverage JSON with top-level or `totals` coverage values.
 - `go-cover`: Go coverage profiles, used by Bachkator's own test target.
 - `gocyclo`: optional complexity reports.
+
+Project-specific report formats can use a quality plugin:
+
+```hcl
+plugin "atelier_lint" {
+  type    = "quality"
+  command = ["bun", "scripts/bach/parse-lint-quality.ts"]
+}
+
+quality "shell.lint" {
+  lint {
+    path   = ".bach/artifacts/lint.json"
+    parser = plugin.atelier_lint
+  }
+
+  quality_gate {
+    metric = "issues.total.count"
+    max    = 0
+  }
+}
+```
+
+Quality plugin stdout must be normalized JSON:
+
+```json
+{
+  "metrics": [
+    { "name": "issues.total.count", "value": 0, "unit": "count" }
+  ],
+  "findings": []
+}
+```
+
+The JSON must include `metrics`, `findings`, or both. Unknown top-level fields are rejected. Metric `name` and `value` are required; finding `kind` is required.
+
+The JSON Schema lives at `docs/schemas/quality-plugin-report.schema.json` and is embedded in the `bach` binary. Agents can read it with `bach reference quality-plugin-report-schema`.
+
+Use `format = "junit-xml"` and other built-in format strings for built-in parsers. Use `parser = plugin.<name>` for quality plugins. A report declaration must not set both `format` and `parser`.
+
+Quality parser failures and quality gate failures mark the target `quality-failed`. Cached targets do not rerun quality parsers or gates; use `--force` when fresh quality evidence is required.
+
+Targets can opt into retrying gate failures:
+
+```hcl
+retry {
+  attempts                      = 3
+  backoff                       = "5s"
+  retry_on_quality_gate_failure = true
+}
+```
+
+Only gate failures retry. Parser failures do not retry because they usually indicate a broken parser/report contract.
 
 Query stored quality data:
 

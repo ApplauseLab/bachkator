@@ -165,3 +165,9 @@ func withQualityGate(gates ...model.QualityGateSpec) targetOption {
 		target.SpecValue.Quality.Gates = append([]model.QualityGateSpec(nil), gates...)
 	}
 }
+
+func withQualityReport(reports ...model.QualityReportDeclaration) targetOption {
+	return func(target *Target) {
+		target.SpecValue.Quality.Reports = append([]model.QualityReportDeclaration(nil), reports...)
+	}
+}

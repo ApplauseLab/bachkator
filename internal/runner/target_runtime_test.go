@@ -5,12 +5,12 @@ import "testing"
 func TestTargetFingerprintIncludesLock(t *testing.T) {
 	project := &Project{Root: t.TempDir()}
 	target := shellTarget("shell/test", "true")
-	withoutLock, _, err := targetFingerprintParts(project, target, GitContext{}, nil, nil)
+	withoutLock, _, err := targetFingerprintParts(project, target, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	target.SpecValue.Runtime.Lock = "postgres"
-	withLock, _, err := targetFingerprintParts(project, target, GitContext{}, nil, nil)
+	withLock, _, err := targetFingerprintParts(project, target, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

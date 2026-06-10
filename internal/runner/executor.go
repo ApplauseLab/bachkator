@@ -51,7 +51,6 @@ func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Targ
 	fingerprint, fingerprintParts, err := targetFingerprintParts(
 		s.project,
 		target,
-		s.gitContext,
 		s.dotenv,
 		fingerprintInputs,
 	)
@@ -64,14 +63,37 @@ func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Targ
 		r.finishNoopTarget(s, target, fingerprint, description.Operation, logFile)
 		return nil
 	}
+	if r.DryRun {
+		status := ""
+		if targetCacheable(target) && !r.Force &&
+			targetFresh(target, s.project.Root, record, fingerprint) {
+			status = "cached"
+		} else if targetCacheable(target) {
+			reasons := targetStaleReasons(
+				target,
+				s.project.Root,
+				record,
+				fingerprint,
+				fingerprintParts,
+				r.Force,
+			)
+			if len(reasons) > 0 {
+				status = "stale: " + strings.Join(reasons, ", ")
+			}
+		}
+		r.printTargetOperation(s, target, status, description.Operation, logFile)
+		s.rememberFingerprint(target.Name, fingerprint)
+		s.finishTarget(target.Name, "dry-run")
+		return nil
+	}
 	if !r.Force && targetCacheable(target) &&
 		targetFresh(target, s.project.Root, record, fingerprint) {
-		s.printf(target, "[%s] up to date\n", target.Name)
-		logf(logFile, "[%s] up to date\n", target.Name)
+		r.printTargetOperation(s, target, "cached", description.Operation, logFile)
 		s.rememberFingerprint(target.Name, fingerprint)
 		s.finishTarget(target.Name, "cached")
 		return nil
 	}
+	status := ""
 	if targetCacheable(target) {
 		reasons := targetStaleReasons(
 			target,
@@ -82,8 +104,7 @@ func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Targ
 			r.Force,
 		)
 		if len(reasons) > 0 {
-			s.printf(target, "[%s] stale: %s\n", target.Name, strings.Join(reasons, ", "))
-			logf(logFile, "[%s] stale: %s\n", target.Name, strings.Join(reasons, ", "))
+			status = "stale: " + strings.Join(reasons, ", ")
 		}
 	}
 
@@ -92,40 +113,27 @@ func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Targ
 		workdir = absPath(s.project.Root, shell.WorkDir)
 	}
 
-	s.printf(target, "[%s] %s\n", targetLabel(target), description.Operation)
-	logf(logFile, "[%s] %s\n", targetLabel(target), description.Operation)
-	if r.DryRun {
-		s.rememberFingerprint(target.Name, fingerprint)
-		s.finishTarget(target.Name, "dry-run")
-		return nil
-	}
+	r.printTargetOperation(s, target, status, description.Operation, logFile)
 
-	if err := r.runCommandAndContract(ctx, s, target, workdir, runtimeEnv, logFile); err != nil {
-		s.finishTarget(target.Name, "failed")
-		return err
-	}
-	spec := target.Spec()
-	if err := quality.IngestReports(
+	if err := r.runCommandContractAndQuality(
 		ctx,
-		quality.IngestRequest{
-			StatePath:  s.project.StatePath,
-			RunID:      s.run.ID,
-			TargetName: target.Name,
-			Workdir:    workdir,
-			Env:        runtimeEnv,
-			Reports:    spec.Quality.Reports,
-			Gates:      spec.Quality.Gates,
-			Log:        logFile,
-		},
+		s,
+		target,
+		workdir,
+		runtimeEnv,
+		logFile,
 	); err != nil {
-		s.finishTarget(target.Name, "quality-failed")
+		if quality.IsGateError(err) || quality.IsParseError(err) {
+			s.finishTarget(target.Name, "quality-failed")
+			return err
+		}
+		s.finishTarget(target.Name, "failed")
 		return err
 	}
 	if targetCacheable(target) {
 		fingerprint, fingerprintParts, err = targetFingerprintParts(
 			s.project,
 			target,
-			s.gitContext,
 			s.dotenv,
 			fingerprintInputs,
 		)
@@ -150,7 +158,29 @@ func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Targ
 	return nil
 }
 
-func (r Runner) runCommandAndContract(
+func (r Runner) printTargetOperation(
+	s *Session,
+	target *Target,
+	status string,
+	operation string,
+	logFile io.Writer,
+) {
+	line := TargetOperationLine{
+		Timestamp: time.Now().UTC(),
+		Label:     targetLabel(target),
+		Status:    status,
+		Operation: operation,
+	}
+	console := r.consoleWriter()
+	if s.runner.streamsProgress(target) {
+		s.outputMu.Lock()
+		console.TargetOperation(s.runner.Stdout, line)
+		s.outputMu.Unlock()
+	}
+	console.TargetOperation(logFile, line)
+}
+
+func (r Runner) runCommandContractAndQuality(
 	ctx context.Context,
 	s *Session,
 	target *Target,
@@ -169,16 +199,20 @@ func (r Runner) runCommandAndContract(
 			s.printf(target, "[%s] retry attempt %d/%d\n", targetLabel(target), attempt, attempts)
 			logf(logFile, "[%s] retry attempt %d/%d\n", targetLabel(target), attempt, attempts)
 		}
+		stdout := s.commandOutput(target, s.runner.Stdout, logFile)
+		stderr := s.commandOutput(target, s.runner.Stderr, logFile)
 		err := executeTarget(
 			ctx,
 			target,
 			targetpkg.ExecuteRequest{
 				Env:     runtimeEnv,
 				WorkDir: workdir,
-				Stdout:  s.commandOutput(target, s.runner.Stdout, logFile),
-				Stderr:  s.commandOutput(target, s.runner.Stderr, logFile),
+				Stdout:  stdout,
+				Stderr:  stderr,
 			},
 		)
+		flushCommandOutput(stdout)
+		flushCommandOutput(stderr)
 		if err == nil {
 			err = logFile.Sync()
 		}
@@ -197,10 +231,29 @@ func (r Runner) runCommandAndContract(
 			err = timeoutErr
 		}
 		if err == nil {
+			skipQualitySave := spec.Runtime.Retry.RetryOnQualityGateFailure && attempt < attempts
+			err = quality.IngestReports(
+				ctx,
+				quality.IngestRequest{
+					StatePath:   s.project.StatePath,
+					RunID:       s.run.ID,
+					TargetName:  target.Name,
+					ProjectRoot: s.project.Root,
+					Workdir:     workdir,
+					Env:         runtimeEnv,
+					Plugins:     s.project.Plugins,
+					Reports:     spec.Quality.Reports,
+					Gates:       spec.Quality.Gates,
+					Log:         s.progressLog(target, logFile),
+					SkipSave:    skipQualitySave,
+				},
+			)
+		}
+		if err == nil {
 			return nil
 		}
 		lastErr = err
-		if attempt == attempts || ctx.Err() != nil {
+		if attempt == attempts || ctx.Err() != nil || !shouldRetryAttempt(err, spec.Runtime.Retry) {
 			break
 		}
 		if spec.Runtime.Retry.Backoff > 0 {
@@ -247,6 +300,22 @@ func (r Runner) runCommandAndContract(
 		}
 	}
 	return lastErr
+}
+
+func shouldRetryAttempt(err error, retry model.RetryPolicy) bool {
+	if quality.IsParseError(err) {
+		return false
+	}
+	if quality.IsGateError(err) {
+		return retry.RetryOnQualityGateFailure
+	}
+	return true
+}
+
+func flushCommandOutput(w io.Writer) {
+	if flusher, ok := w.(interface{ Flush() }); ok {
+		flusher.Flush()
+	}
 }
 
 type syncWriter interface {

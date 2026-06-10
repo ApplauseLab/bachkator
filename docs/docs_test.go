@@ -71,3 +71,28 @@ func TestSearchPrioritizesHeadingSlug(t *testing.T) {
 		t.Fatalf("heading = %q, want Computed Variables", sections[0].Heading.Title)
 	}
 }
+
+func TestFormatHeadingsIncludesEmbeddedAssets(t *testing.T) {
+	formatted := FormatHeadings([]Heading{
+		{File: "reference.md", Level: 1, Title: "Bach Reference"},
+	})
+	if !strings.Contains(formatted, "Embedded assets:\n  quality-plugin-report-schema") {
+		t.Fatalf("formatted headings do not include embedded schema asset: %q", formatted)
+	}
+}
+
+func TestSearchAssetsReturnsEmbeddedSchema(t *testing.T) {
+	assets, err := SearchAssets("quality-plugin-report-schema")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(assets) != 1 {
+		t.Fatalf("asset count = %d, want 1", len(assets))
+	}
+	if assets[0].File != "schemas/quality-plugin-report.schema.json" {
+		t.Fatalf("asset file = %q, want quality plugin schema", assets[0].File)
+	}
+	if !strings.Contains(assets[0].Body, `"Bachkator Quality Plugin Report"`) {
+		t.Fatalf("asset body does not include schema title: %q", assets[0].Body)
+	}
+}

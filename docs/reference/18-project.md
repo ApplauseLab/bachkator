@@ -5,7 +5,7 @@ Every Bachfile needs one `project` block:
 ```hcl
 project "example" {
   root    = "."
-  default = "shell/test"
+  default = "shell.test"
   state   = ".bach/state.db"
 }
 ```

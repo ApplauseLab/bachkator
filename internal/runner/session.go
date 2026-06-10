@@ -77,7 +77,7 @@ func (s *Session) completeRun(status string) error {
 
 func (s *Session) completeFailedRun(err error) error {
 	status := "failed"
-	if quality.IsGateError(err) {
+	if quality.IsGateError(err) || quality.IsParseError(err) {
 		status = "quality-failed"
 	}
 	if completeErr := s.completeRun(status); completeErr != nil {
@@ -197,7 +197,7 @@ func (s *Session) targetLogPath(target string) string {
 }
 
 func (s *Session) printf(target *Target, format string, args ...any) {
-	if !s.runner.streamsTarget(target) {
+	if !s.runner.streamsProgress(target) {
 		return
 	}
 	s.outputMu.Lock()
@@ -206,10 +206,22 @@ func (s *Session) printf(target *Target, format string, args ...any) {
 }
 
 func (s *Session) commandOutput(target *Target, stream io.Writer, logFile io.Writer) io.Writer {
-	if !s.runner.streamsTarget(target) {
+	if !s.runner.streamsCommandOutput(target) {
 		return logFile
 	}
-	return io.MultiWriter(stream, logFile)
+	return newCommandOutputWriter(stream, logFile, s.runner.consoleWriter(), targetLabel(target))
+}
+
+func (s *Session) progressLog(target *Target, logFile io.Writer) io.Writer {
+	if !s.runner.streamsProgress(target) {
+		return logFile
+	}
+	return newCommandOutputWriter(
+		s.runner.Stdout,
+		logFile,
+		s.runner.consoleWriter(),
+		targetLabel(target),
+	)
 }
 
 func (s *Session) dependencyFingerprints(plan *Plan, targetName string) map[string]string {

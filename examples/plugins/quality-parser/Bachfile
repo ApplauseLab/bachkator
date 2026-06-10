@@ -1,0 +1,33 @@
+# vim: set ft=hcl :
+
+project "quality-parser-example" {
+  root    = "."
+  default = "shell.lint"
+  state   = ".bach/state.db"
+}
+
+plugin "todo_lint" {
+  type    = "quality"
+  command = ["sh", "scripts/parse-todo-lint.sh"]
+  timeout = "10s"
+}
+
+shell "lint" {
+  shell = "mkdir -p .bach/artifacts && grep -n TODO src/app.txt > .bach/artifacts/todo-lint.txt || true"
+  inputs = ["src/app.txt", "scripts/parse-todo-lint.sh"]
+  outputs = {
+    report = ".bach/artifacts/todo-lint.txt"
+  }
+}
+
+quality "shell.lint" {
+  lint {
+    path   = shell.lint.outputs.report
+    parser = plugin.todo_lint
+  }
+
+  quality_gate {
+    metric = "issues.total.count"
+    max    = 0
+  }
+}

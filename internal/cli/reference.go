@@ -18,6 +18,14 @@ func runReference(args []string, stdout io.Writer, _ io.Writer) error {
 		return err
 	}
 	query := strings.Join(args, " ")
+	assets, assetErr := docs.SearchAssets(query)
+	if assetErr != nil {
+		return assetErr
+	}
+	if len(assets) > 0 {
+		_, err := fmt.Fprint(stdout, docs.FormatAssets(assets))
+		return err
+	}
 	sections, err := docs.Search(query)
 	if err != nil {
 		return err

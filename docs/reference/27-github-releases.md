@@ -12,7 +12,7 @@ var "release_version" {
 }
 
 shell "github-release" {
-  depends_on = ["shell/build"]
+  depends_on = [shell.build]
   command = [
     "gh",
     "release",

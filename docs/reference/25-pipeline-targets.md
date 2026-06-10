@@ -6,10 +6,10 @@ Pipeline targets run existing targets in a declared sequence. Use them for deplo
 pipeline "deploy-staging" {
   timeout = "15m"
   steps = [
-    "shell/render-staging",
-    "shell/apply-staging",
-    "shell/rollout-staging",
-    "shell/smoke-staging",
+    shell.render-staging,
+    shell.apply-staging,
+    shell.rollout-staging,
+    shell.smoke-staging,
   ]
 }
 ```
@@ -18,15 +18,15 @@ Pipeline steps may reference shell, image, or pipeline targets. Nested pipelines
 
 ```hcl
 pipeline "build-lane" {
-  steps = ["shell/build-a", "shell/build-b"]
+  steps = [shell.build-a, shell.build-b]
 }
 
 pipeline "merge-lane" {
-  steps = ["shell/merge-a", "shell/merge-b"]
+  steps = [shell.merge-a, shell.merge-b]
 }
 
 pipeline "delivery-program" {
-  steps = ["pipeline/build-lane", "pipeline/merge-lane", "shell/regression"]
+  steps = [pipeline.build-lane, pipeline.merge-lane, shell.regression]
 }
 ```
 

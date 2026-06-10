@@ -16,6 +16,7 @@ func RuntimeProject(project *Project) *model.RunProject {
 		Inputs:           cloneInputs(project.Inputs),
 		Resources:        cloneResources(project.Resources),
 		Producers:        cloneStringMap(project.Producers),
+		Plugins:          clonePlugins(project.Plugins),
 		Targets:          make(map[string]*model.RunTarget, len(project.Targets)),
 		Aliases:          cloneAliases(project.Aliases),
 	}
@@ -23,6 +24,34 @@ func RuntimeProject(project *Project) *model.RunProject {
 		runtimeProject.Targets[name] = runtimeTarget(target)
 	}
 	return runtimeProject
+}
+
+func clonePlugins(plugins map[string]*Plugin) map[string]*model.Plugin {
+	if len(plugins) == 0 {
+		return nil
+	}
+	out := make(map[string]*model.Plugin, len(plugins))
+	for key, plugin := range plugins {
+		if plugin == nil {
+			continue
+		}
+		sources := make(map[string][]string, len(plugin.Sources))
+		for name, values := range plugin.Sources {
+			sources[name] = append([]string(nil), values...)
+		}
+		out[key] = &model.Plugin{
+			Name:    plugin.Name,
+			Type:    plugin.Type,
+			Command: append([]string(nil), plugin.Command...),
+			Shell:   plugin.Shell,
+			WorkDir: plugin.WorkDir,
+			Inputs:  append([]string(nil), plugin.Inputs...),
+			Env:     append([]string(nil), plugin.Env...),
+			Sources: sources,
+			Timeout: plugin.TimeoutDuration,
+		}
+	}
+	return out
 }
 
 func runtimeTarget(target *Target) *model.RunTarget {

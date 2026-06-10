@@ -69,8 +69,16 @@ A logical capability or produced artifact identity used as dependency evidence w
 _Avoid_: Virtual file, artifact
 
 **Plugin**:
-An external executable that extends the loaded project graph by contributing input sets or target dependency/input patches.
-_Avoid_: Runner extension, target extension
+A typed external executable declared in a Bachfile. The plugin type determines its lifecycle and stdout contract.
+_Avoid_: Go plugin, state-store extension, arbitrary lifecycle hook
+
+**Graph Plugin**:
+A `type = "graph"` Plugin that runs while loading a Project and may contribute input sets or target dependency/input patches.
+_Avoid_: Runtime hook, target execution plugin
+
+**Quality Plugin**:
+A `type = "quality"` Plugin that runs during quality parsing after a target command succeeds, reads a report file, and emits normalized quality metrics/findings JSON.
+_Avoid_: Quality gate, State Store writer
 
 **Internal Extension Point**:
 A compile-time seam where Bachkator's own packages can register target kinds, config blocks, quality handlers, or CLI commands without exposing a public extension API.
@@ -118,7 +126,8 @@ _Avoid_: Target-kind quality logic, runner parser
 - A **Target** may consume **Inputs** or **Resources**.
 - A **Target** may declare **Outputs** as concrete file evidence.
 - A **Target** may produce **Resources** as logical dependency evidence.
-- A **Plugin** may add **Inputs** and dependency/input patches before target validation, fingerprinting, scheduling, and affected-target matching.
+- A **Graph Plugin** may add **Inputs** and dependency/input patches before target validation, fingerprinting, scheduling, and affected-target matching.
+- A **Quality Plugin** may parse a target-produced report file into **Quality Report** metrics/findings during quality ingestion.
 - An **Internal Extension Point** enables parallel feature work inside Bachkator while preserving the **CLI Contract** as the public product boundary.
 - A **Subsystem Registry** owns one extension family; target kinds, config blocks, quality handlers, and CLI commands should not share one global registry.
 - The **Composition Root** wires built-in **Subsystem Registries**, handlers, and production dependencies without making them public extension APIs.
@@ -174,7 +183,7 @@ _Avoid_: Target-kind quality logic, runner parser
 - "workflow" should resolve to **Pipeline Target** only when target execution order is the point; otherwise prefer **Target** or **Run**.
 - "dependency order" should not imply execution sequence; use **Pipeline Target** when ordering is required.
 - ".bach/state.db" should resolve to **State Store**; avoid describing its SQLite schema as a supported user or plugin interface.
-- "plugin" should not imply execution hooks, state access, or new target kinds; those would be separate future extension points.
+- "plugin" should resolve to a typed external executable. Check the plugin type before assuming lifecycle: graph plugins run at Project load; quality plugins run during quality ingestion.
 - "artifact" is overloaded; prefer **Output** for configured file evidence, **Resource** for logical dependency evidence, and run artifact when referring to recorded files from a **Run**.
 - "API" should mean the **CLI Contract** unless a future decision explicitly creates a public Go API.
 - "registry" should mean an **Internal Extension Point** unless a future ADR explicitly accepts an external/runtime extension API.

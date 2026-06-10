@@ -24,6 +24,7 @@ type CompletionCheck = model.CompletionCheckSpec
 type Input = model.Input
 type RetryPolicy = model.RetryPolicy
 type QualityGateSpec = model.QualityGateSpec
+type QualityReportDeclaration = model.QualityReportDeclaration
 type GitContext = gitpkg.Context
 
 type Runner struct {

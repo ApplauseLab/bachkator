@@ -10,7 +10,7 @@ shell "build" {
   remote                = false
   destructive           = false
   requires_confirmation = false
-  depends_on            = ["shell/test"]
+  depends_on            = [shell.test]
   quiet                 = true
   lock                  = "container-builder"
   timeout               = "5m"

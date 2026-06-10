@@ -41,9 +41,13 @@ func logf(w io.Writer, format string, args ...any) {
 	_, _ = fmt.Fprintf(w, format, args...)
 }
 
-func (r Runner) streamsTarget(target *Target) bool {
+func (r Runner) streamsProgress(target *Target) bool {
+	return r.Verbose || target == nil || !target.Spec().Runtime.Quiet
+}
+
+func (r Runner) streamsCommandOutput(target *Target) bool {
 	if r.LogOnly {
 		return false
 	}
-	return r.Verbose || target == nil || !target.Spec().Runtime.Quiet
+	return r.streamsProgress(target)
 }

@@ -15,18 +15,34 @@ import (
 )
 
 type IngestRequest struct {
-	StatePath  string
-	RunID      string
-	TargetName string
-	Workdir    string
-	Env        map[string]string
-	Reports    []model.QualityReportDeclaration
-	Gates      []model.QualityGateSpec
-	Log        io.Writer
+	StatePath   string
+	RunID       string
+	TargetName  string
+	ProjectRoot string
+	Workdir     string
+	Env         map[string]string
+	Plugins     map[string]*model.Plugin
+	Reports     []model.QualityReportDeclaration
+	Gates       []model.QualityGateSpec
+	Log         io.Writer
+	SkipSave    bool
 }
 
 type GateError struct {
 	Gates []state.QualityGateResult
+}
+
+type ParseError struct {
+	Reports []state.QualityReport
+}
+
+func (e ParseError) Error() string {
+	var out strings.Builder
+	out.WriteString("quality reports failed:")
+	for _, report := range e.Reports {
+		fmt.Fprintf(&out, "\n- %s %s failed: %s", report.Kind, report.Path, report.Message)
+	}
+	return out.String()
 }
 
 func (e GateError) Error() string {
@@ -51,11 +67,17 @@ func IsGateError(err error) bool {
 	return errors.As(err, &gateErr)
 }
 
+func IsParseError(err error) bool {
+	var parseErr ParseError
+	return errors.As(err, &parseErr)
+}
+
 func IngestReports(ctx context.Context, req IngestRequest) error {
 	if len(req.Reports) == 0 && len(req.Gates) == 0 {
 		return nil
 	}
 	reports := make([]state.QualityReport, 0, len(req.Reports))
+	var parseFailures []state.QualityReport
 	metricsByName := map[string]float64{}
 	for _, declaration := range req.Reports {
 		if err := ctx.Err(); err != nil {
@@ -71,10 +93,22 @@ func IngestReports(ctx context.Context, req IngestRequest) error {
 			Status:    "success",
 			CreatedAt: time.Now().UTC(),
 		}
-		parsed, err := ParseReport(absPath(req.Workdir, path), declaration)
+		parsed, err := ParseReport(ParseRequest{
+			Context:     ctx,
+			Path:        absPath(req.Workdir, path),
+			DisplayPath: path,
+			Declaration: declaration,
+			Workdir:     req.Workdir,
+			ProjectRoot: req.ProjectRoot,
+			Env:         req.Env,
+			Plugins:     req.Plugins,
+			RunID:       req.RunID,
+			TargetName:  req.TargetName,
+		})
 		if err != nil {
 			report.Status = "failed"
 			report.Message = err.Error()
+			parseFailures = append(parseFailures, report)
 			logf(req.Log, "quality report %s failed: %s\n", declaration.Path, err)
 		} else {
 			report.Metrics = parsed.Metrics
@@ -93,14 +127,19 @@ func IngestReports(ctx context.Context, req IngestRequest) error {
 		reports = append(reports, report)
 	}
 	gates := EvaluateGates(req.RunID, req.TargetName, req.Gates, metricsByName)
-	if err := state.NewStore(req.StatePath).SaveQualityReports(reports, gates); err != nil {
-		return err
-	}
 	var failures []state.QualityGateResult
 	for _, gate := range gates {
 		if gate.Status == "failed" {
 			failures = append(failures, gate)
 		}
+	}
+	if !req.SkipSave || len(parseFailures) > 0 || len(failures) == 0 {
+		if err := state.NewStore(req.StatePath).SaveQualityReports(reports, gates); err != nil {
+			return err
+		}
+	}
+	if len(parseFailures) > 0 {
+		return ParseError{Reports: parseFailures}
 	}
 	if len(failures) > 0 {
 		for _, failure := range failures {

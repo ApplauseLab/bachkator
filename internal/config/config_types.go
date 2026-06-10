@@ -18,6 +18,7 @@ type Project struct {
 	Inputs           map[string]*Input
 	Resources        map[string]*Resource
 	Producers        map[string]string
+	Plugins          map[string]*Plugin
 	Targets          map[string]*Target
 	Aliases          map[string]*Alias
 }
@@ -33,8 +34,9 @@ type ToolRequirement = model.ToolRequirement
 type QualityReportDeclaration = model.QualityReportDeclaration
 
 type QualityReportBlock struct {
-	Path   string `hcl:"path"`
-	Format string `hcl:"format,optional"`
+	Path   string         `hcl:"path"`
+	Format string         `hcl:"format,optional"`
+	Parser hcl.Expression `hcl:"parser,optional"`
 }
 
 type Variable struct {
@@ -53,13 +55,16 @@ type Alias struct {
 }
 
 type Plugin struct {
-	Name    string              `hcl:"name,label"`
-	Command []string            `hcl:"command,optional"`
-	Shell   string              `hcl:"shell,optional"`
-	WorkDir string              `hcl:"workdir,optional"`
-	Inputs  []string            `hcl:"inputs,optional"`
-	Env     []string            `hcl:"env,optional"`
-	Sources map[string][]string `hcl:"sources,optional"`
+	Name            string              `hcl:"name,label"`
+	Type            string              `hcl:"type,optional"`
+	Command         []string            `hcl:"command,optional"`
+	Shell           string              `hcl:"shell,optional"`
+	WorkDir         string              `hcl:"workdir,optional"`
+	Inputs          []string            `hcl:"inputs,optional"`
+	Env             []string            `hcl:"env,optional"`
+	Sources         map[string][]string `hcl:"sources,optional"`
+	Timeout         string              `hcl:"timeout,optional"`
+	TimeoutDuration time.Duration
 }
 
 type CompletionCheck struct {
@@ -69,9 +74,10 @@ type CompletionCheck struct {
 }
 
 type RetryBlock struct {
-	Attempts        int    `hcl:"attempts,optional"`
-	Backoff         string `hcl:"backoff,optional"`
-	BackoffDuration time.Duration
+	Attempts                  int    `hcl:"attempts,optional"`
+	Backoff                   string `hcl:"backoff,optional"`
+	RetryOnQualityGateFailure bool   `hcl:"retry_on_quality_gate_failure,optional"`
+	BackoffDuration           time.Duration
 }
 
 type QualityConfig struct {

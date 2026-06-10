@@ -17,4 +17,4 @@ run 20260608T120000.000000000Z success target=shell/test duration=1.2s logs=.bac
 targets: success=3 cached=2 failed=0 dry-run=0 running=0
 ```
 
-`-log-only` and `quiet = true` targets still suppress command output in the terminal, but the summary is printed so agents can report the outcome and log location. Failed runs include the last 20 non-empty lines from the first failed target log; successful runs do not print log excerpts.
+`-log-only` suppresses command stdout/stderr in the terminal while keeping Bach progress, quality progress, and the final summary visible. `quiet = true` targets suppress their command output and target progress unless `-verbose` is set. Full target output is still written to the target log so agents can report the outcome and log location. Failed runs include the last 20 non-empty lines from the first failed target log; successful runs do not print log excerpts.

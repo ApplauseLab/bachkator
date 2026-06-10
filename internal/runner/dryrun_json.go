@@ -141,7 +141,6 @@ func (r Runner) dryRunPlanTarget(
 	fingerprint, fingerprintParts, err := targetFingerprintParts(
 		project,
 		target,
-		gitContext,
 		dotenv,
 		plan.DependencyFingerprints(target.Name, fingerprints),
 	)

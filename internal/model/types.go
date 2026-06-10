@@ -13,6 +13,7 @@ type Project struct {
 	Inputs           map[string]*Input
 	Resources        map[string]*Resource
 	Producers        map[string]string
+	Plugins          map[string]*Plugin
 	Targets          map[string]*Target
 	Aliases          map[string]*Alias
 }
@@ -27,6 +28,7 @@ type RunProject struct {
 	Inputs           map[string]*Input
 	Resources        map[string]*Resource
 	Producers        map[string]string
+	Plugins          map[string]*Plugin
 	Targets          map[string]*RunTarget
 	Aliases          map[string]*Alias
 }
@@ -79,12 +81,14 @@ type Alias struct {
 
 type Plugin struct {
 	Name    string
+	Type    string
 	Command []string
 	Shell   string
 	WorkDir string
 	Inputs  []string
 	Env     []string
 	Sources map[string][]string
+	Timeout time.Duration
 }
 
 type PluginContext struct {
@@ -134,6 +138,7 @@ func (p PreflightCheck) Label() string {
 type QualityReportDeclaration struct {
 	Kind   string
 	Format string
+	Parser string
 	Path   string
 }
 
@@ -224,8 +229,9 @@ type TargetRuntime struct {
 }
 
 type RetryPolicy struct {
-	Attempts int
-	Backoff  time.Duration
+	Attempts                  int
+	Backoff                   time.Duration
+	RetryOnQualityGateFailure bool
 }
 
 type TargetQuality struct {

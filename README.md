@@ -26,6 +26,7 @@ Bachkator gives them an operational contract:
 - 🧰 **Check required tools and preflights** before execution.
 - 🚦 **Mark risk** with remote, destructive, and confirmation-required metadata.
 - 📊 **Parse quality reports** and enforce quality gates through `bach quality`.
+- 🔌 **Parse project-specific quality reports** with typed quality plugins.
 - 🧾 **Keep durable logs** under `.bach/runs/<run-id>/`.
 - 📚 **Ship docs in the binary** with `bach reference`.
 
@@ -47,7 +48,7 @@ curl -fsSL https://raw.githubusercontent.com/ApplauseLab/bachkator/main/install.
 Or build from source:
 
 ```sh
-go build -o bach ./cmd/bach
+go run ./cmd/bach run shell/build
 ```
 
 ## 🧱 Bachfile in one screen
@@ -59,7 +60,7 @@ Or run agentic loops: [examples/plan-agents](https://github.com/ApplauseLab/bach
 
 project "example" {
   root    = "."
-  default = "shell/test"
+  default = "shell.test"
   state   = ".bach/state.db"
 }
 
@@ -119,14 +120,14 @@ quality "lint" {
 }
 
 shell "build" {
-  depends_on = ["shell/test"]
+  depends_on = [shell.test]
   command    = ["go", "build", "-o", "dist/app", "./cmd/app"]
   inputs     = [input.file.go_sources]
   outputs    = ["dist/app"]
 }
 
 pipeline "ci" {
-  steps = ["shell/lint", "shell/test", "shell/build"]
+  steps = [shell.lint, shell.test, shell.build]
 }
 ```
 
@@ -140,6 +141,8 @@ bach --dry-run run shell/lint
 bach run shell/lint
 bach --dry-run run shell/test
 bach -j 8 run shell/test
+bach --dry-run run group/gate
+bach --log-only --force run group/gate
 bach quality summary
 bach runs
 ```
@@ -157,6 +160,8 @@ Think Terraform, but for repository operations:
 | apply changes intentionally | run named Targets intentionally |
 
 Bachkator does not replace your language tooling. It wraps it in a shared CLI Contract so every human, CI job, and agent uses the same Targets.
+
+Inside this repository, that contract is mandatory for routine project work: use Bach targets instead of running tools such as `gofmt`, `go test`, `go build`, `golangci-lint`, Bats, docs generators, or release scripts directly. If a repeated operation is missing, add or update a Bach target first, then run that target.
 
 ## 🧬 Claude dynamic workflows vs Bachkator
 
@@ -187,7 +192,8 @@ Agents should not guess. They should:
 3. `bach --dry-run run <target>` before expensive or side-effecting work
 4. `bach affected` after edits
 5. `bach run <target>` for the smallest useful gate
-6. `bach runs` and `.bach/runs/.../*.log` when something fails
+6. `bach --log-only --force run group/gate` before handing off or committing so quality reports and gates execute instead of relying on cached status
+7. `bach runs` and `.bach/runs/.../*.log` when something fails
 
 See the [Agent Guide](docs/agents.md) for the full workflow.
 
@@ -197,12 +203,14 @@ Bachkator lets Targets publish report files and lets `quality` blocks parse and 
 
 - `shell/test` → Go coverage profile → `coverage.line.percent` gate.
 - `shell/lint` → golangci-lint Checkstyle XML → `issues.total.count == 0` gate.
+- `group/gate` → lint, unit tests, and e2e tests in one deduplicated graph.
 - `.golangci.yml` → `golines` at 100 columns plus `dupl` duplication checks.
 
 Because the linter exits zero, Bachkator owns the quality decision and records findings/gates in the State Store.
 
 ```sh
 bach run shell/lint
+bach --log-only --force run group/gate
 bach quality findings
 bach quality gates
 ```
@@ -211,6 +219,7 @@ bach quality gates
 
 - 🐝 [Agent swarm delivery](examples/plan-agents/README.md): OpenCode feature agents, merge agents, locks, checkpoints, and regression gates.
 - 📦 [Bun package graph plugin](examples/plugins/): plugin-provided dependency closures for `bach affected`.
+- 📊 [Quality parser plugin](examples/plugins/quality-parser/README.md): project-local report parser emitting Bach metrics and findings.
 - 🌍 [Terraform delivery](examples/terraform-delivery/): risk metadata, ordered delivery flows, and infrastructure-shaped Targets.
 
 ## ✅ Supported today
@@ -235,6 +244,7 @@ bach quality gates
 - `bach affected` suggestions from changed files and plugin-provided Inputs.
 - OCI image build command generation for Docker or Apple `container`.
 - Quality report parsing, normalized metrics/findings, and quality gates.
+- Typed plugins, including graph-load plugins and quality parser plugins.
 - GitHub release Targets through `gh release create`.
 
 ## 📚 Docs

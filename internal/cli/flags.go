@@ -71,7 +71,7 @@ func bindFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().
 		StringVar(&opts.envFile, "env-file", "", "load command environment from file instead of project .env")
 	cmd.PersistentFlags().
-		BoolVar(&opts.logOnly, "log-only", false, "write target progress and command output only to log files")
+		BoolVar(&opts.logOnly, "log-only", false, "suppress command output; keep progress on terminal and logs")
 	cmd.PersistentFlags().
 		IntVarP(&opts.jobs, "jobs", "j", opts.jobs, "maximum targets to run in parallel")
 	cmd.PersistentFlags().

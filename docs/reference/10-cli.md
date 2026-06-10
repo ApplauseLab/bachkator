@@ -27,7 +27,7 @@ Supported flags:
 - `-yes`: confirm execution of targets marked `requires_confirmation = true`.
 - `-env-file <path>`: load target operation environment from this file after project `.env`.
 - `-profile <name>`: select an environment profile. May be repeated; later profiles win.
-- `-log-only`: write target progress and operation output only to `.bach/runs/.../*.log` files.
+- `-log-only`: suppress command stdout/stderr in the terminal while keeping Bach progress and quality progress visible; full output is still written to `.bach/runs/.../*.log` files.
 - `-j <n>`: maximum number of targets to run in parallel.
 - `-var name=value`: set a Bachkator variable. May be repeated.
 - `--json`: with `--dry-run run`, print a machine-readable execution plan.

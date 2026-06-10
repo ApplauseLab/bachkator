@@ -43,12 +43,12 @@ shell "install-bats" {
   command = [
     "sh",
     "-c",
-    "rm -rf tools/bats-core tools/bats-core.tar.gz && mkdir -p tools && curl -fsSL \"https://github.com/bats-core/bats-core/archive/refs/tags/${var.bats_version}.tar.gz\" -o tools/bats-core.tar.gz && mkdir -p tools/bats-core && tar -xzf tools/bats-core.tar.gz --strip-components=1 -C tools/bats-core && rm tools/bats-core.tar.gz",
+    "rm -rf .bach/tools/bats-core .bach/tools/bats-core.tar.gz && mkdir -p .bach/tools && curl -fsSL \"https://github.com/bats-core/bats-core/archive/refs/tags/${var.bats_version}.tar.gz\" -o .bach/tools/bats-core.tar.gz && mkdir -p .bach/tools/bats-core && tar -xzf .bach/tools/bats-core.tar.gz --strip-components=1 -C .bach/tools/bats-core && rm .bach/tools/bats-core.tar.gz",
   ]
   tools = [{
     name = "curl"
   }]
-  outputs = ["tools/bats-core/bin/bats"]
+  outputs = [".bach/tools/bats-core/bin/bats"]
 }
 
 shell "docs-generate" {
@@ -58,11 +58,16 @@ shell "docs-generate" {
   outputs     = ["docs/reference.md"]
 }
 
+shell "fmt" {
+  description = "Format Go source files"
+  command     = ["gofmt", "-w", "cmd", "internal", "docs", "examples"]
+}
+
 shell "test" {
-  command = ["sh", "-c", "go test -coverprofile=$(RUN_DIRECTORY)/coverage.out ./..."]
+  command = ["sh", "-c", "mkdir -p .bach/artifacts && go test -coverprofile=.bach/artifacts/coverage.out ./..."]
   inputs  = [input.file.go_sources]
   outputs = {
-    coverage = "$(RUN_DIRECTORY)/coverage.out"
+    coverage = ".bach/artifacts/coverage.out"
   }
 }
 
@@ -71,7 +76,7 @@ shell "e2e" {
   command    = ["sh", "scripts/run-bats-e2e.sh"]
   inputs     = [input.file.e2e_sources]
   outputs = {
-    junit = "$(RUN_DIRECTORY)/bats-junit.xml"
+    junit = ".bach/artifacts/bats-junit.xml"
   }
 }
 
@@ -101,11 +106,9 @@ quality "shell.test" {
 
 shell "lint" {
   command = [
-    "golangci-lint",
-    "run",
-    "--issues-exit-code=0",
-    "--output.checkstyle.path=$(RUN_DIRECTORY)/checkstyle.xml",
-    "--output.text.path=stdout",
+    "sh",
+    "-c",
+    "mkdir -p .bach/artifacts && golangci-lint run --issues-exit-code=0 --output.checkstyle.path=.bach/artifacts/checkstyle.xml --output.text.path=stdout",
   ]
   tools = [{
     name    = "golangci-lint"
@@ -114,7 +117,7 @@ shell "lint" {
   }]
   inputs = [input.file.go_sources]
   outputs = {
-    checkstyle = "$(RUN_DIRECTORY)/checkstyle.xml"
+    checkstyle = ".bach/artifacts/checkstyle.xml"
   }
 }
 
@@ -128,6 +131,11 @@ quality "shell.lint" {
     metric = "issues.total.count"
     max    = 0
   }
+}
+
+group "gate" {
+  description = "Run lint, unit tests, and e2e tests as one deduplicated graph"
+  targets     = [shell.lint, shell.test, shell.e2e]
 }
 
 shell "build" {

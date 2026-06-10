@@ -2,6 +2,8 @@
 
 Use Bachkator for all project operations in this repository. The CLI command is `bach`; during local development you can run it with `go run ./cmd/bach`.
 
+Do not run project tools directly for normal repo work. Use Bach targets instead of `gofmt`, `go test`, `go build`, `golangci-lint`, Bats, docs generators, release scripts, or ad hoc shell pipelines. If a repeated operation is missing, add or update a Bach target first, then use that target.
+
 ## Required Workflow
 
 Start by discovering available operations:
@@ -21,6 +23,8 @@ Use Bach targets instead of ad hoc commands:
 ```sh
 go run ./cmd/bach run shell/test
 go run ./cmd/bach run shell/lint
+go run ./cmd/bach run shell/fmt
+go run ./cmd/bach --log-only --force run group/gate
 go run ./cmd/bach run shell/build
 go run ./cmd/bach run shell/build-release
 go run ./cmd/bach --var release_version=v0.1.2 run shell/github-release
@@ -50,7 +54,11 @@ Logs are under:
 
 - `shell/test`: run the Go test suite.
 - `shell/lint`: run golangci-lint, parse Checkstyle output, and enforce zero lint issues.
+- `shell/fmt`: format Go source files with gofmt.
+- `group/gate`: run lint, unit tests, and e2e tests as one deduplicated graph.
 - `shell/build`: build the local `dist/bach` binary.
+- `shell/e2e`: build `dist/bach`, install local Bats if needed, and run CLI e2e tests.
+- `shell/docs-generate`: regenerate `docs/reference.md` from `docs/reference/*.md`.
 - `shell/build-release`: build macOS/Linux amd64/arm64 release archives.
 - `shell/github-release`: create a GitHub release with the release archives.
 
@@ -70,6 +78,7 @@ The release target pins the GitHub tag to `$BACH_GIT_COMMIT` and uploads all mul
 - Do not commit `.bach/`, `dist/`, or `.opencode-snitch-off`.
 - `shell/lint` requires a golangci-lint v2-compatible binary on `PATH`; `.golangci.yml`
   also enables `golines` at 100 columns and `dupl` duplication checks.
+- Never run `gofmt`, `go test`, `go build`, `golangci-lint`, Bats, or docs generators directly for routine work; use Bach targets so cache, logs, quality gates, and affected-target logic stay authoritative.
 - Prefer `bach reference <topic>` over reading source when asking about supported Bachfile syntax.
 - If a Bach target is missing for a repeated operation, add or update the Bachfile instead of documenting another standalone command.
 
@@ -87,8 +96,7 @@ Then regenerate and test:
 
 ```sh
 go run ./cmd/bach run shell/docs-generate
-go run ./cmd/bach run shell/lint
-go run ./cmd/bach run shell/test
+go run ./cmd/bach --log-only --force run group/gate
 ```
 
 Use feature/topic names for reference fragments, not implementation phase numbers. For example, prefer `computed-variables.md`, `target-locks.md`, or `completion-contracts.md` over `phase-1.md`.
@@ -110,7 +118,7 @@ Each phase worker should:
   `go run ./cmd/bach --dry-run run shell/lint` and
   `go run ./cmd/bach --dry-run run shell/test`.
 - After edits, run `go run ./cmd/bach affected` to choose focused tests.
-- Run focused tests repeatedly, then `go run ./cmd/bach run shell/lint` and `go run ./cmd/bach run shell/test` before committing.
+- Run focused Bach targets repeatedly, then `go run ./cmd/bach --log-only --force run group/gate` before committing so quality reports and gates execute instead of relying on cached status.
 - Commit only intended phase files on the phase branch and do not merge back.
 
 Merge phases back sequentially. After every merge or conflict resolution, run:

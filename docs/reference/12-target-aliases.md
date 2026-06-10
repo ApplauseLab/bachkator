@@ -4,8 +4,8 @@ Use top-level `alias` blocks to preserve old command names while directing users
 
 ```hcl
 alias "staging-kristiyan-deploy" {
-  target      = "pipeline/deploy-kristiyan"
-  deprecated = "Use pipeline/deploy-kristiyan."
+  target      = "pipeline.deploy-kristiyan"
+  deprecated = "Use pipeline.deploy-kristiyan."
 }
 ```
 

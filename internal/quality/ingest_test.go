@@ -70,8 +70,8 @@ func TestIngestReportsPersistsFailedReport(t *testing.T) {
 		},
 		Log: &log,
 	})
-	if err != nil {
-		t.Fatal(err)
+	if !IsParseError(err) {
+		t.Fatalf("err = %v, want parse error", err)
 	}
 	reports, err := state.NewStore(statePath).ListQualityReports(10)
 	if err != nil {

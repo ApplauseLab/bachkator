@@ -214,8 +214,9 @@ func TestLoadDecodesTargetTimeoutAndRetry(t *testing.T) {
 shell "flaky" {
   timeout = "5m"
   retry {
-    attempts = 3
-    backoff  = "2s"
+    attempts                      = 3
+    backoff                       = "2s"
+    retry_on_quality_gate_failure = true
   }
   command = ["true"]
 }
@@ -232,8 +233,9 @@ shell "flaky" {
 	if runtime.Timeout != 5*time.Minute {
 		t.Fatalf("timeout = %s, want 5m", runtime.Timeout)
 	}
-	if runtime.Retry.Attempts != 3 || runtime.Retry.Backoff != 2*time.Second {
-		t.Fatalf("retry = %#v, want attempts=3 backoff=2s", runtime.Retry)
+	if runtime.Retry.Attempts != 3 || runtime.Retry.Backoff != 2*time.Second ||
+		!runtime.Retry.RetryOnQualityGateFailure {
+		t.Fatalf("retry = %#v, want attempts=3 backoff=2s retry_on_quality", runtime.Retry)
 	}
 }
 
@@ -371,6 +373,78 @@ quality "shell.test" {
 		quality.Gates[0].Max == nil ||
 		*quality.Gates[0].Max != 0 {
 		t.Fatalf("gates = %#v", quality.Gates)
+	}
+}
+
+func TestLoadDecodesQualityPluginParser(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "Bachfile")
+	contents := `project "example" {}
+
+plugin "lint_parser" {
+  type    = "quality"
+  command = ["node", "parse-lint.js"]
+  timeout = "7s"
+  env     = ["MODE=strict"]
+}
+
+shell "lint" {
+  command = ["true"]
+}
+
+quality "shell.lint" {
+  lint {
+    path   = ".bach/artifacts/lint.json"
+    parser = plugin.lint_parser
+  }
+}
+`
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	project, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reports := project.Targets["shell/lint"].Spec().Quality.Reports
+	if len(reports) != 1 || reports[0].Parser != "lint_parser" || reports[0].Format != "" {
+		t.Fatalf("reports = %#v", reports)
+	}
+	plugin := project.Plugins["lint_parser"]
+	if plugin == nil || plugin.Type != "quality" || plugin.TimeoutDuration != 7*time.Second {
+		t.Fatalf("plugin = %#v", plugin)
+	}
+}
+
+func TestLoadRejectsQualityParserGraphPlugin(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "Bachfile")
+	contents := `project "example" {}
+
+plugin "graph_parser" {
+  command = ["node", "graph.js"]
+}
+
+shell "lint" {
+  command = ["true"]
+}
+
+quality "shell.lint" {
+  lint {
+    path   = ".bach/artifacts/lint.json"
+    parser = plugin.graph_parser
+  }
+}
+`
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Load(path)
+	if err == nil ||
+		!strings.Contains(err.Error(), `parser plugin "graph_parser" must have type = "quality"`) {
+		t.Fatalf("error = %v, want non-quality parser plugin validation", err)
 	}
 }
 

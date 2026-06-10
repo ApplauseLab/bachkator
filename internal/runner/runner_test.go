@@ -595,6 +595,97 @@ printf "%s" "$n" > attempts
 	}
 }
 
+func TestRunnerRetriesQualityGateFailuresWhenOptedIn(t *testing.T) {
+	dir := t.TempDir()
+	writeScript(t, dir, "quality.sh", `n=$(cat attempts 2>/dev/null || printf 0)
+n=$((n + 1))
+printf "%s" "$n" > attempts
+if [ "$n" -lt 2 ]; then
+  printf '<testsuite tests="1" failures="1" errors="0" skipped="0"><testcase name="bad"><failure message="not yet"/></testcase></testsuite>' > junit.xml
+else
+  printf '<testsuite tests="1" failures="0" errors="0" skipped="0"><testcase name="ok"/></testsuite>' > junit.xml
+fi
+`)
+	project := &Project{
+		Root:      dir,
+		StatePath: filepath.Join(dir, ".bach", "state.db"),
+		Targets: map[string]*Target{
+			"quality": commandTarget(
+				"quality",
+				[]string{"sh", "quality.sh"},
+				withRetry(RetryPolicy{Attempts: 3, RetryOnQualityGateFailure: true}),
+				withQualityReport(QualityReportDeclaration{
+					Kind:   "test",
+					Format: "junit-xml",
+					Path:   "junit.xml",
+				}),
+				withQualityGate(QualityGateSpec{Metric: "tests.failed", Max: ptrFloat64(0)}),
+			),
+		},
+	}
+
+	var out bytes.Buffer
+	if err := (Runner{Stdout: &out, Stderr: &out}).Run(
+		context.Background(),
+		project,
+		"quality",
+	); err != nil {
+		t.Fatal(err)
+	}
+	contents, readErr := os.ReadFile(filepath.Join(dir, "attempts"))
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(contents) != "2" {
+		t.Fatalf("attempt count = %q, want 2", string(contents))
+	}
+	gates, err := statestore.NewStore(project.StatePath).ListQualityGateResults(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(gates) != 1 || gates[0].Status != "success" {
+		t.Fatalf("gates = %#v, want only final successful gate", gates)
+	}
+}
+
+func TestRunnerDoesNotRetryQualityParseFailures(t *testing.T) {
+	dir := t.TempDir()
+	writeScript(t, dir, "quality.sh", `n=$(cat attempts 2>/dev/null || printf 0)
+n=$((n + 1))
+printf "%s" "$n" > attempts
+printf 'not xml' > junit.xml
+`)
+	project := &Project{
+		Root:      dir,
+		StatePath: filepath.Join(dir, ".bach", "state.db"),
+		Targets: map[string]*Target{
+			"quality": commandTarget(
+				"quality",
+				[]string{"sh", "quality.sh"},
+				withRetry(RetryPolicy{Attempts: 3, RetryOnQualityGateFailure: true}),
+				withQualityReport(QualityReportDeclaration{
+					Kind:   "test",
+					Format: "junit-xml",
+					Path:   "junit.xml",
+				}),
+			),
+		},
+	}
+
+	var out bytes.Buffer
+	err := (Runner{Stdout: &out, Stderr: &out}).Run(context.Background(), project, "quality")
+	if err == nil || !strings.Contains(err.Error(), "quality reports failed") {
+		t.Fatalf("error = %v, want quality parse failure", err)
+	}
+	contents, readErr := os.ReadFile(filepath.Join(dir, "attempts"))
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(contents) != "1" {
+		t.Fatalf("attempt count = %q, want 1", string(contents))
+	}
+}
+
 func ptrFloat64(value float64) *float64 { return &value }
 
 func writeScript(t *testing.T, dir string, name string, contents string) {
@@ -702,7 +793,6 @@ func TestStaleReasonsIdentifyCacheInvalidationCause(t *testing.T) {
 			"env":          "old-env",
 			"operation":    "old-operation",
 			"dependencies": "old-dependencies",
-			"git":          "old-git",
 		},
 	}
 	parts := map[string]string{
@@ -710,11 +800,10 @@ func TestStaleReasonsIdentifyCacheInvalidationCause(t *testing.T) {
 		"env":          "new-env",
 		"operation":    "new-operation",
 		"dependencies": "new-dependencies",
-		"git":          "new-git",
 	}
 
 	reasons := targetStaleReasons(target, dir, record, "new", parts, true)
-	for _, want := range []string{"forced run", "changed input", "changed env var", "changed operation", "dependency fingerprint change", "dirty Git state", "missing output"} {
+	for _, want := range []string{"forced run", "changed input", "changed env var", "changed operation", "dependency fingerprint change", "missing output"} {
 		if !containsString(reasons, want) {
 			t.Fatalf("stale reasons = %#v, want %q", reasons, want)
 		}
@@ -1702,14 +1791,15 @@ func TestRunnerRecordsRunsAndStreamsTargetLogs(t *testing.T) {
 	if err := runner.Run(context.Background(), project, "hello"); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(stdout.String(), "[hello] printf stdout; printf stderr >&2\nstdout") ||
+	if !strings.Contains(stdout.String(), "[hello] printf stdout; printf stderr >&2") ||
+		!strings.Contains(stdout.String(), "[hello] stdout") ||
 		!strings.Contains(
 			stdout.String(),
 			"\ntargets: success=1 cached=0 failed=0 preflight-failed=0 quality-failed=0 dry-run=0 running=0\n",
 		) {
 		t.Fatalf("stdout = %q", stdout.String())
 	}
-	if stderr.String() != "stderr" {
+	if !strings.Contains(stderr.String(), "[hello] stderr") {
 		t.Fatalf("stderr = %q", stderr.String())
 	}
 
@@ -1740,7 +1830,7 @@ func TestRunnerRecordsRunsAndStreamsTargetLogs(t *testing.T) {
 	}
 }
 
-func TestRunnerLogOnlyWritesProgressAndOutputOnlyToLogs(t *testing.T) {
+func TestRunnerLogOnlyStreamsProgressAndWritesOutputOnlyToLogs(t *testing.T) {
 	dir := t.TempDir()
 	project := &Project{
 		Root:      dir,
@@ -1755,6 +1845,16 @@ func TestRunnerLogOnlyWritesProgressAndOutputOnlyToLogs(t *testing.T) {
 	runner := Runner{LogOnly: true, Stdout: &stdout, Stderr: &stderr}
 	if err := runner.Run(context.Background(), project, "hello"); err != nil {
 		t.Fatal(err)
+	}
+	if !strings.Contains(
+		stdout.String(),
+		"[hello] printf stdout; printf stderr >&2",
+	) {
+		t.Fatalf("stdout = %q, want target progress", stdout.String())
+	}
+	if strings.Contains(stdout.String(), "] stdout") ||
+		strings.Contains(stdout.String(), "] stderr") {
+		t.Fatalf("stdout = %q, want command output suppressed", stdout.String())
 	}
 	if !strings.Contains(
 		stdout.String(),
@@ -1779,6 +1879,41 @@ func TestRunnerLogOnlyWritesProgressAndOutputOnlyToLogs(t *testing.T) {
 		!strings.Contains(logText, "stdout") ||
 		!strings.Contains(logText, "stderr") {
 		t.Fatalf("log does not contain progress and output: %q", logText)
+	}
+}
+
+func TestRunnerLogOnlyStreamsQualityProgress(t *testing.T) {
+	dir := t.TempDir()
+	project := &Project{
+		Root:      dir,
+		StatePath: filepath.Join(dir, ".bach", "state.db"),
+		Targets: map[string]*Target{
+			"quality": shellTarget(
+				"quality",
+				`printf '<testsuite tests="1" failures="0" errors="0" skipped="0"><testcase classname="pkg" name="ok"/></testsuite>' > junit.xml`,
+				withQualityReport(QualityReportDeclaration{
+					Kind:   "test",
+					Format: "junit-xml",
+					Path:   "junit.xml",
+				}),
+			),
+		},
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	runner := Runner{LogOnly: true, Stdout: &stdout, Stderr: &stderr}
+	if err := runner.Run(context.Background(), project, "quality"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(
+		stdout.String(),
+		"[quality] quality report junit.xml parsed: metrics=4 findings=1",
+	) {
+		t.Fatalf("stdout = %q, want streamed quality progress", stdout.String())
+	}
+	if stderr.String() != "" {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
 }
 
@@ -1863,6 +1998,13 @@ func TestRunnerLogOnlyOverridesVerbose(t *testing.T) {
 	runner := Runner{LogOnly: true, Verbose: true, Stdout: &stdout, Stderr: &stderr}
 	if err := runner.Run(context.Background(), project, "hello"); err != nil {
 		t.Fatal(err)
+	}
+	if !strings.Contains(stdout.String(), "[hello] printf stdout; printf stderr >&2") {
+		t.Fatalf("stdout = %q, want target progress", stdout.String())
+	}
+	if strings.Contains(stdout.String(), "] stdout") ||
+		strings.Contains(stdout.String(), "] stderr") {
+		t.Fatalf("stdout = %q, want command output suppressed", stdout.String())
 	}
 	if !strings.Contains(
 		stdout.String(),
@@ -1949,6 +2091,52 @@ func TestDryRunWithInputsDoesNotPersistState(t *testing.T) {
 	}
 	if _, err := os.Stat(project.StatePath); !os.IsNotExist(err) {
 		t.Fatalf("dry-run created state db, stat error = %v", err)
+	}
+}
+
+func TestDryRunFreshTargetReportsDryRunStatus(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "input.txt"), []byte("one"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	project := &Project{
+		Root:      dir,
+		StatePath: filepath.Join(dir, ".bach", "state.db"),
+		Targets: map[string]*Target{
+			"build": shellTarget(
+				"build",
+				"mkdir -p out && cp input.txt out/app.txt",
+				withInputs("input.txt"),
+				withOutputs("out/app.txt"),
+			),
+		},
+	}
+
+	var out bytes.Buffer
+	if err := (Runner{Stdout: &out, Stderr: &out}).Run(
+		context.Background(),
+		project,
+		"build",
+	); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := (Runner{DryRun: true, Stdout: &out, Stderr: &out}).Run(
+		context.Background(),
+		project,
+		"build",
+	); err != nil {
+		t.Fatal(err)
+	}
+	got := out.String()
+	if !strings.Contains(got, "[build] (cached) mkdir -p out && cp input.txt out/app.txt") {
+		t.Fatalf("stdout = %q, want cached operation", got)
+	}
+	if !strings.Contains(
+		got,
+		"targets: success=0 cached=0 failed=0 preflight-failed=0 quality-failed=0 dry-run=1 running=0",
+	) {
+		t.Fatalf("stdout = %q, want dry-run target count", got)
 	}
 }
 
