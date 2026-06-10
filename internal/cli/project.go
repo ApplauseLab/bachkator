@@ -10,6 +10,7 @@ type LoadOptions struct {
 type Project struct {
 	Backing          any
 	DefaultTarget    string
+	Root             string
 	StatePath        string
 	SelectedProfiles []string
 	Targets          map[string]*Target

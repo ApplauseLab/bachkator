@@ -122,12 +122,15 @@ func loadTargetRuns(db *sql.DB, state *State, runsByID map[string]int) error {
 	if err != nil {
 		return err
 	}
-	rows, err := db.Query(
-		fmt.Sprintf(
-			`SELECT run_id, target, status, started_at, finished_at, log_path, %s FROM target_runs ORDER BY started_at ASC`,
-			operationColumn,
-		),
-	)
+	exitCodeColumn, err := targetRunExitCodeColumn(db)
+	if err != nil {
+		return err
+	}
+	rows, err := db.Query(fmt.Sprintf(
+		`SELECT run_id, target, status, started_at, finished_at, log_path, %s, %s FROM target_runs ORDER BY started_at ASC`,
+		operationColumn,
+		exitCodeColumn,
+	))
 	if err != nil {
 		return err
 	}
@@ -135,6 +138,7 @@ func loadTargetRuns(db *sql.DB, state *State, runsByID map[string]int) error {
 	for rows.Next() {
 		var runID, target, startedAt, finishedAt string
 		var targetRun TargetRunRecord
+		var exitCode sql.NullInt64
 		if err := rows.Scan(
 			&runID,
 			&target,
@@ -143,8 +147,13 @@ func loadTargetRuns(db *sql.DB, state *State, runsByID map[string]int) error {
 			&finishedAt,
 			&targetRun.LogPath,
 			&targetRun.Operation,
+			&exitCode,
 		); err != nil {
 			return err
+		}
+		if exitCode.Valid {
+			value := int(exitCode.Int64)
+			targetRun.ExitCode = &value
 		}
 		runIndex, ok := runsByID[runID]
 		if !ok {
@@ -155,6 +164,31 @@ func loadTargetRuns(db *sql.DB, state *State, runsByID map[string]int) error {
 		state.Runs[runIndex].Targets[target] = targetRun
 	}
 	return rows.Err()
+}
+
+func targetRunExitCodeColumn(db *sql.DB) (string, error) {
+	rows, err := db.Query(`PRAGMA table_info(target_runs)`)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var cid int
+		var name, columnType string
+		var notNull int
+		var defaultValue any
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			return "", err
+		}
+		if name == "exit_code" {
+			return "exit_code", nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	return "NULL", nil
 }
 
 func targetRunOperationColumn(db *sql.DB) (string, error) {

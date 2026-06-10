@@ -20,6 +20,9 @@ type options struct {
 	runsStatus   string
 	runsSince    string
 	artifactPath string
+	logsFailed   bool
+	logsLast     int
+	logsErrors   bool
 	dryRun       bool
 	force        bool
 	yes          bool
@@ -62,6 +65,9 @@ func bindFlags(cmd *cobra.Command, opts *options) {
 		StringVar(&opts.runsSince, "since", "", "filter runs or artifacts since a duration like 24h or an RFC3339 time")
 	cmd.PersistentFlags().
 		StringVar(&opts.artifactPath, "artifact", "", "filter runs or artifacts by artifact path substring")
+	cmd.PersistentFlags().BoolVar(&opts.logsFailed, "failed", false, "show only failed target logs")
+	cmd.PersistentFlags().IntVar(&opts.logsLast, "last", 0, "show only the last N log lines")
+	cmd.PersistentFlags().BoolVar(&opts.logsErrors, "errors", false, "show only likely error lines")
 	cmd.PersistentFlags().
 		BoolVar(&opts.dryRun, "dry-run", false, "print commands without running them")
 	cmd.PersistentFlags().
@@ -86,8 +92,11 @@ func normalizeArgs(args []string) []string {
 		"-aliases":    true,
 		"-dry-run":    true,
 		"-env-file":   true,
+		"-errors":     true,
 		"-force":      true,
+		"-failed":     true,
 		"-format":     true,
+		"-last":       true,
 		"-log-only":   true,
 		"-json":       true,
 		"-profile":    true,

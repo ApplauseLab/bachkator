@@ -40,6 +40,7 @@ func testCLIProject(project *config.Project) *Project {
 	out := &Project{
 		Backing:          project,
 		DefaultTarget:    project.DefaultTarget,
+		Root:             project.Root,
 		StatePath:        project.StatePath,
 		SelectedProfiles: append([]string(nil), project.SelectedProfiles...),
 		Targets:          make(map[string]*Target, len(project.Targets)),

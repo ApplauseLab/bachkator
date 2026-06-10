@@ -33,6 +33,7 @@ type TargetRunRecord struct {
 	FinishedAt time.Time
 	LogPath    string
 	Operation  string
+	ExitCode   *int
 }
 
 type ArtifactRecord struct {

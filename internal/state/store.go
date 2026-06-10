@@ -97,6 +97,14 @@ func (s Store) ListQualityGateResults(limit int) ([]QualityGateResult, error) {
 	return ListQualityGateResults(s.path, limit)
 }
 
+func (s Store) QualityReportsForRun(runID string) ([]QualityReport, error) {
+	return QualityReportsForRun(s.path, runID)
+}
+
+func (s Store) QualityGateResultsForRun(runID string) ([]QualityGateResult, error) {
+	return QualityGateResultsForRun(s.path, runID)
+}
+
 func runHasArtifactPath(run RunRecord, path string) bool {
 	for _, artifact := range run.Artifacts {
 		if strings.Contains(artifact.Path, path) {

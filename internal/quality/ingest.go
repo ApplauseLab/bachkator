@@ -15,17 +15,19 @@ import (
 )
 
 type IngestRequest struct {
-	StatePath   string
-	RunID       string
-	TargetName  string
-	ProjectRoot string
-	Workdir     string
-	Env         map[string]string
-	Plugins     map[string]*model.Plugin
-	Reports     []model.QualityReportDeclaration
-	Gates       []model.QualityGateSpec
-	Log         io.Writer
-	SkipSave    bool
+	StatePath            string
+	RunID                string
+	TargetName           string
+	ProjectRoot          string
+	Workdir              string
+	Env                  map[string]string
+	Plugins              map[string]*model.Plugin
+	Reports              []model.QualityReportDeclaration
+	Gates                []model.QualityGateSpec
+	Log                  io.Writer
+	SkipSave             bool
+	AllowMissingReports  bool
+	TreatFailuresAsNotes bool
 }
 
 type GateError struct {
@@ -106,6 +108,14 @@ func IngestReports(ctx context.Context, req IngestRequest) error {
 			TargetName:  req.TargetName,
 		})
 		if err != nil {
+			if req.AllowMissingReports && os.IsNotExist(err) {
+				logf(
+					req.Log,
+					"quality report %s missing after command failure; skipped\n",
+					declaration.Path,
+				)
+				continue
+			}
 			report.Status = "failed"
 			report.Message = err.Error()
 			parseFailures = append(parseFailures, report)
@@ -139,11 +149,17 @@ func IngestReports(ctx context.Context, req IngestRequest) error {
 		}
 	}
 	if len(parseFailures) > 0 {
+		if req.TreatFailuresAsNotes {
+			return nil
+		}
 		return ParseError{Reports: parseFailures}
 	}
 	if len(failures) > 0 {
 		for _, failure := range failures {
 			logf(req.Log, "quality gate failed: %s\n", failure.Message)
+		}
+		if req.TreatFailuresAsNotes {
+			return nil
 		}
 		return GateError{Gates: failures}
 	}

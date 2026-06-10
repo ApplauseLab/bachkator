@@ -42,11 +42,19 @@ func builtinCommandRegistry() *commandRegistry {
 		},
 	})
 	mustRegisterCommandAdapter(registry, "runs", commandAdapter{
-		use:          "runs",
+		use:          "runs [inspect <run-id>]",
 		short:        "List recorded runs",
 		needsProject: true,
 		run: func(ctx commandContext, args []string) error {
-			return runListRuns(ctx.project, ctx.opts, ctx.stdout)
+			return runRuns(ctx.project, ctx.opts, args, ctx.stdout)
+		},
+	})
+	mustRegisterCommandAdapter(registry, "logs", commandAdapter{
+		use:          "logs <run-id>",
+		short:        "Show recorded target logs",
+		needsProject: true,
+		run: func(ctx commandContext, args []string) error {
+			return runLogs(ctx.project, ctx.opts, args, ctx.stdout)
 		},
 	})
 	mustRegisterCommandAdapter(registry, "artifacts", commandAdapter{

@@ -194,6 +194,138 @@ func ListQualityGateResults(path string, limit int) ([]QualityGateResult, error)
 	return gates, rows.Err()
 }
 
+func QualityReportsForRun(path string, runID string) ([]QualityReport, error) {
+	db, err := OpenDB(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = db.Close() }()
+	rows, err := db.Query(
+		`SELECT id, run_id, target, kind, format, path, status, message, created_at FROM quality_reports WHERE run_id = ? ORDER BY created_at ASC`,
+		runID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var reports []QualityReport
+	for rows.Next() {
+		var report QualityReport
+		var createdAt string
+		if err := rows.Scan(
+			&report.ID,
+			&report.RunID,
+			&report.Target,
+			&report.Kind,
+			&report.Format,
+			&report.Path,
+			&report.Status,
+			&report.Message,
+			&createdAt,
+		); err != nil {
+			return nil, err
+		}
+		report.CreatedAt = parseTime(createdAt)
+		reports = append(reports, report)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	for index := range reports {
+		metrics, err := qualityMetricsForReport(db, reports[index].ID)
+		if err != nil {
+			return nil, err
+		}
+		findings, err := qualityFindingsForReport(db, reports[index].ID)
+		if err != nil {
+			return nil, err
+		}
+		reports[index].Metrics = metrics
+		reports[index].Findings = findings
+	}
+	return reports, nil
+}
+
+func QualityGateResultsForRun(path string, runID string) ([]QualityGateResult, error) {
+	db, err := OpenDB(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = db.Close() }()
+	rows, err := db.Query(
+		`SELECT run_id, target, metric, op, threshold, actual, status, message, created_at FROM quality_gate_results WHERE run_id = ? ORDER BY created_at ASC`,
+		runID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var gates []QualityGateResult
+	for rows.Next() {
+		var gate QualityGateResult
+		var createdAt string
+		if err := rows.Scan(
+			&gate.RunID,
+			&gate.Target,
+			&gate.Metric,
+			&gate.Op,
+			&gate.Threshold,
+			&gate.Actual,
+			&gate.Status,
+			&gate.Message,
+			&createdAt,
+		); err != nil {
+			return nil, err
+		}
+		gate.CreatedAt = parseTime(createdAt)
+		gates = append(gates, gate)
+	}
+	return gates, rows.Err()
+}
+
+func qualityMetricsForReport(db *sql.DB, reportID int64) ([]QualityMetric, error) {
+	rows, err := db.Query(
+		`SELECT name, scope, value, unit FROM quality_metrics WHERE report_id = ? ORDER BY name ASC`,
+		reportID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	return scanQualityMetrics(rows)
+}
+
+func qualityFindingsForReport(db *sql.DB, reportID int64) ([]QualityFinding, error) {
+	rows, err := db.Query(
+		`SELECT kind, file, line, severity, rule, message, duration_ms FROM quality_findings WHERE report_id = ? ORDER BY id ASC`,
+		reportID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var findings []QualityFinding
+	for rows.Next() {
+		var finding QualityFinding
+		if err := rows.Scan(
+			&finding.Kind,
+			&finding.File,
+			&finding.Line,
+			&finding.Severity,
+			&finding.Rule,
+			&finding.Message,
+			&finding.DurationMS,
+		); err != nil {
+			return nil, err
+		}
+		findings = append(findings, finding)
+	}
+	return findings, rows.Err()
+}
+
 func scanQualityMetrics(rows *sql.Rows) ([]QualityMetric, error) {
 	var metrics []QualityMetric
 	for rows.Next() {

@@ -70,6 +70,8 @@ Unqualified quality targets default to shell targets, so `quality "test-api"` at
 
 After the target operation exits successfully, Bachkator parses declared reports into the SQLite state database, then evaluates gates. A failing gate marks the target and run as `quality-failed`.
 
+If the target command exits non-zero but declared report files already exist, Bachkator still attempts best-effort parsing before finalizing the target as `failed`. Parsed reports and gate results are saved as diagnostic evidence, so commands such as `bach quality failing-tests` and `bach runs inspect --json <run-id>` can help diagnose the failed command. Missing report files are tolerated on this path because the command failure may have prevented report creation. Parser and gate failures after a command failure are recorded as secondary diagnostics; they do not change the primary target status from `failed` to `quality-failed`.
+
 `$(RUN_DIRECTORY)` is a Bach runtime placeholder expanded before operation execution. It points at a per-target directory under the current run, for example `.bach/runs/<run-id>/shell__test-api`. Bach also exposes the same value as `BACH_RUN_DIRECTORY` and `RUN_DIRECTORY` environment variables.
 
 Supported initial formats:

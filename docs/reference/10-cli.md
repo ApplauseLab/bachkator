@@ -10,6 +10,8 @@ bach graph
 bach quality [summary|reports|metrics|findings|gates|slow-targets|failing-tests]
 bach reference [topic]
 bach runs
+bach runs inspect <run-id>
+bach logs <run-id>
 ```
 
 Supported flags:
@@ -22,6 +24,9 @@ Supported flags:
 - `--status <status>`: filter `runs` or `artifacts` by run status.
 - `--since <duration|time>`: filter `runs` or `artifacts` by age or RFC3339 timestamp.
 - `--artifact <path>`: filter `runs` or `artifacts` by artifact path substring.
+- `--failed`: with `logs`, show only failed target logs.
+- `--last <n>`: with `logs`, show only the last N log lines.
+- `--errors`: with `logs`, show only likely error/failure lines.
 - `--dry-run`: print the planned operations without executing them.
 - `-force`: run cacheable targets even when their fingerprints are fresh.
 - `-yes`: confirm execution of targets marked `requires_confirmation = true`.
@@ -30,7 +35,7 @@ Supported flags:
 - `-log-only`: suppress command stdout/stderr in the terminal while keeping Bach progress and quality progress visible; full output is still written to `.bach/runs/.../*.log` files.
 - `-j <n>`: maximum number of targets to run in parallel.
 - `-var name=value`: set a Bachkator variable. May be repeated.
-- `--json`: with `--dry-run run`, print a machine-readable execution plan.
+- `--json`: with `--dry-run run`, print a machine-readable execution plan; with `runs inspect`, print a machine-readable failure summary.
 - `--format <mermaid|json>`: choose the `graph` output format.
 - `--version`: print the Bachkator version.
 

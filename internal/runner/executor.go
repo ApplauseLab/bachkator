@@ -2,8 +2,11 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -55,7 +58,7 @@ func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Targ
 		fingerprintInputs,
 	)
 	if err != nil {
-		s.finishTarget(target.Name, "failed")
+		s.finishTargetWithExitCode(target.Name, "failed", exitCodeFromError(err))
 		return err
 	}
 
@@ -127,7 +130,7 @@ func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Targ
 			s.finishTarget(target.Name, "quality-failed")
 			return err
 		}
-		s.finishTarget(target.Name, "failed")
+		s.finishTargetWithExitCode(target.Name, "failed", exitCodeFromError(err))
 		return err
 	}
 	if targetCacheable(target) {
@@ -213,6 +216,7 @@ func (r Runner) runCommandContractAndQuality(
 		)
 		flushCommandOutput(stdout)
 		flushCommandOutput(stderr)
+		commandErr := err
 		if err == nil {
 			err = logFile.Sync()
 		}
@@ -229,6 +233,7 @@ func (r Runner) runCommandContractAndQuality(
 		}
 		if timeoutErr := targetRuntimeError(ctx, target); timeoutErr != nil {
 			err = timeoutErr
+			commandErr = timeoutErr
 		}
 		if err == nil {
 			skipQualitySave := spec.Runtime.Retry.RetryOnQualityGateFailure && attempt < attempts
@@ -246,6 +251,25 @@ func (r Runner) runCommandContractAndQuality(
 					Gates:       spec.Quality.Gates,
 					Log:         s.progressLog(target, logFile),
 					SkipSave:    skipQualitySave,
+				},
+			)
+		}
+		if commandErr != nil {
+			_ = quality.IngestReports(
+				ctx,
+				quality.IngestRequest{
+					StatePath:            s.project.StatePath,
+					RunID:                s.run.ID,
+					TargetName:           target.Name,
+					ProjectRoot:          s.project.Root,
+					Workdir:              workdir,
+					Env:                  runtimeEnv,
+					Plugins:              s.project.Plugins,
+					Reports:              spec.Quality.Reports,
+					Gates:                spec.Quality.Gates,
+					Log:                  s.progressLog(target, logFile),
+					AllowMissingReports:  true,
+					TreatFailuresAsNotes: true,
 				},
 			)
 		}
@@ -316,6 +340,21 @@ func flushCommandOutput(w io.Writer) {
 	if flusher, ok := w.(interface{ Flush() }); ok {
 		flusher.Flush()
 	}
+}
+
+func exitCodeFromError(err error) *int {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		fields := strings.Fields(err.Error())
+		if len(fields) >= 3 && fields[len(fields)-2] == "status" {
+			if code, parseErr := strconv.Atoi(fields[len(fields)-1]); parseErr == nil {
+				return &code
+			}
+		}
+		return nil
+	}
+	code := exitErr.ExitCode()
+	return &code
 }
 
 type syncWriter interface {

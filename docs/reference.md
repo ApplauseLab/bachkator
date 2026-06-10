@@ -20,6 +20,8 @@ bach graph
 bach quality [summary|reports|metrics|findings|gates|slow-targets|failing-tests]
 bach reference [topic]
 bach runs
+bach runs inspect <run-id>
+bach logs <run-id>
 ```
 
 Supported flags:
@@ -32,6 +34,9 @@ Supported flags:
 - `--status <status>`: filter `runs` or `artifacts` by run status.
 - `--since <duration|time>`: filter `runs` or `artifacts` by age or RFC3339 timestamp.
 - `--artifact <path>`: filter `runs` or `artifacts` by artifact path substring.
+- `--failed`: with `logs`, show only failed target logs.
+- `--last <n>`: with `logs`, show only the last N log lines.
+- `--errors`: with `logs`, show only likely error/failure lines.
 - `--dry-run`: print the planned operations without executing them.
 - `-force`: run cacheable targets even when their fingerprints are fresh.
 - `-yes`: confirm execution of targets marked `requires_confirmation = true`.
@@ -40,7 +45,7 @@ Supported flags:
 - `-log-only`: suppress command stdout/stderr in the terminal while keeping Bach progress and quality progress visible; full output is still written to `.bach/runs/.../*.log` files.
 - `-j <n>`: maximum number of targets to run in parallel.
 - `-var name=value`: set a Bachkator variable. May be repeated.
-- `--json`: with `--dry-run run`, print a machine-readable execution plan.
+- `--json`: with `--dry-run run`, print a machine-readable execution plan; with `runs inspect`, print a machine-readable failure summary.
 - `--format <mermaid|json>`: choose the `graph` output format.
 - `--version`: print the Bachkator version.
 
@@ -775,6 +780,29 @@ Output is streamed to both the terminal and per-target log files:
 
 Use `bach runs` to list the 10 most recent prior non-dry-run runs, statuses, timestamps, and log directories. Use `bach runs --runs-limit 0` to list all recorded non-dry-run runs.
 
+Use `bach runs inspect <run-id>` to inspect one completed run. The human output highlights failed targets, exit codes, log paths, parsed quality reports, failed quality gates, and declared preflight/tool fixes. Use `--json` for an agent-readable summary:
+
+```sh
+bach runs inspect --json 20260608T120000.000000000Z
+```
+
+The JSON object includes:
+
+- `run_id`, `requested_target`, `status`, `started_at`, `finished_at`, and `log_dir`.
+- `failed_targets[]` with `target`, `status`, optional `exit_code`, `operation`, `log_path`, `artifacts`, `quality`, preflight/tool diagnostics, and a bounded `log_excerpt`.
+- `quality.reports[]` with report path, parser status, metric count, finding count, and parser message when present.
+- `quality.failed_gates[]` with metric, operator, threshold, actual value, and message.
+- `suggested_fixes[]` from declared tool or preflight `fix` fields.
+
+Use `bach logs <run-id>` for concise log slices without opening large files manually:
+
+```sh
+bach logs 20260608T120000.000000000Z --failed --last 80
+bach logs 20260608T120000.000000000Z --target shell/test --errors
+```
+
+`--failed` limits output to failed target logs. `--target` selects one target. `--last N` bounds output. `--errors` keeps lines containing likely error/failure terms.
+
 Each run ends with a concise terminal summary, including the run ID, status, requested target, duration, log directory, and target status counts:
 
 ```text
@@ -872,6 +900,8 @@ quality "lint" {
 Unqualified quality targets default to shell targets, so `quality "test-api"` attaches to `shell.test-api`. Use `quality "image.build"` or `quality "pipeline.release"` when targeting other target types.
 
 After the target operation exits successfully, Bachkator parses declared reports into the SQLite state database, then evaluates gates. A failing gate marks the target and run as `quality-failed`.
+
+If the target command exits non-zero but declared report files already exist, Bachkator still attempts best-effort parsing before finalizing the target as `failed`. Parsed reports and gate results are saved as diagnostic evidence, so commands such as `bach quality failing-tests` and `bach runs inspect --json <run-id>` can help diagnose the failed command. Missing report files are tolerated on this path because the command failure may have prevented report creation. Parser and gate failures after a command failure are recorded as secondary diagnostics; they do not change the primary target status from `failed` to `quality-failed`.
 
 `$(RUN_DIRECTORY)` is a Bach runtime placeholder expanded before operation execution. It points at a per-target directory under the current run, for example `.bach/runs/<run-id>/shell__test-api`. Bach also exposes the same value as `BACH_RUN_DIRECTORY` and `RUN_DIRECTORY` environment variables.
 

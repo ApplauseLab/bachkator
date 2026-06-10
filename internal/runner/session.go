@@ -111,11 +111,18 @@ func (s *Session) startTarget(target *Target, operation string) TargetRunRecord 
 }
 
 func (s *Session) finishTarget(target string, status string) {
+	s.finishTargetWithExitCode(target, status, nil)
+}
+
+func (s *Session) finishTargetWithExitCode(target string, status string, exitCode *int) {
 	s.stateMu.Lock()
 	defer s.stateMu.Unlock()
 	record := s.run.Targets[target]
 	record.Status = status
 	record.FinishedAt = time.Now().UTC()
+	if exitCode != nil {
+		record.ExitCode = exitCode
+	}
 	s.run.Targets[target] = record
 }
 

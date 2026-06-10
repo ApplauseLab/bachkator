@@ -52,16 +52,21 @@ func SaveSnapshot(path string, targets map[string]Record, runs []RunRecord) erro
 			return err
 		}
 		for target, targetRun := range run.Targets {
+			var exitCode any
+			if targetRun.ExitCode != nil {
+				exitCode = *targetRun.ExitCode
+			}
 			if _, err := tx.Exec(`
-				INSERT INTO target_runs (run_id, target, status, started_at, finished_at, log_path, operation)
-				VALUES (?, ?, ?, ?, ?, ?, ?)
+				INSERT INTO target_runs (run_id, target, status, started_at, finished_at, log_path, operation, exit_code)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 				ON CONFLICT(run_id, target) DO UPDATE SET
 					status = excluded.status,
 					started_at = excluded.started_at,
 					finished_at = excluded.finished_at,
 					log_path = excluded.log_path,
-					operation = excluded.operation
-			`, run.ID, target, targetRun.Status, formatTime(targetRun.StartedAt), formatTime(targetRun.FinishedAt), targetRun.LogPath, targetRun.Operation); err != nil {
+					operation = excluded.operation,
+					exit_code = excluded.exit_code
+			`, run.ID, target, targetRun.Status, formatTime(targetRun.StartedAt), formatTime(targetRun.FinishedAt), targetRun.LogPath, targetRun.Operation, exitCode); err != nil {
 				return err
 			}
 		}

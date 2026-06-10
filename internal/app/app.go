@@ -45,6 +45,7 @@ func cliProject(project *config.Project) *cli.Project {
 	out := &cli.Project{
 		Backing:          project,
 		DefaultTarget:    project.DefaultTarget,
+		Root:             project.Root,
 		StatePath:        project.StatePath,
 		SelectedProfiles: append([]string(nil), project.SelectedProfiles...),
 		Targets:          make(map[string]*cli.Target, len(project.Targets)),
