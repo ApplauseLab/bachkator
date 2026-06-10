@@ -650,6 +650,45 @@ pipeline "deploy-staging" {
 	}
 }
 
+func TestLoadDecodesGroupTargets(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "Bachfile.hcl")
+	contents := `project "example" {
+  default = "group.ci"
+}
+
+shell "lint" {
+  command = ["true"]
+}
+
+shell "test" {
+  command = ["true"]
+}
+
+group "ci" {
+  targets = [shell.lint, "shell.test"]
+}
+`
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	project, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := project.Targets["group/ci"]
+	if target == nil {
+		t.Fatal("missing group target")
+	}
+	if got := target.Targets; len(got) != 2 || got[0] != "shell/lint" || got[1] != "shell/test" {
+		t.Fatalf("group targets = %v, want lint/test", got)
+	}
+	if project.DefaultTarget != "group/ci" {
+		t.Fatalf("default target = %q, want group/ci", project.DefaultTarget)
+	}
+}
+
 func TestLoadRejectsPipelineMissingStep(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "Bachfile.hcl")
@@ -717,8 +756,8 @@ pipeline "outer" {
 
 	if _, err := Load(path); err == nil {
 		t.Fatal("expected pipeline cycle error")
-	} else if !strings.Contains(err.Error(), `pipeline cycle includes`) {
-		t.Fatalf("error = %q, want pipeline cycle", err.Error())
+	} else if !strings.Contains(err.Error(), `composite target cycle includes`) {
+		t.Fatalf("error = %q, want composite target cycle", err.Error())
 	}
 }
 

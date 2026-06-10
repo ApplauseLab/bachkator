@@ -13,9 +13,6 @@ import (
 )
 
 func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Target) error {
-	if _, ok := target.Spec().Body.(model.PipelineSpec); ok {
-		return r.runPipeline(ctx, s, target)
-	}
 	ctx, cancel := targetRuntimeContext(ctx, target)
 	defer cancel()
 	fingerprintInputs := s.dependencyFingerprints(plan, target.Name)
@@ -64,7 +61,7 @@ func (r Runner) runOne(ctx context.Context, s *Session, plan *Plan, target *Targ
 	}
 
 	if !targetRunnable(target) {
-		r.finishNoopTarget(s, target, fingerprint, logFile)
+		r.finishNoopTarget(s, target, fingerprint, description.Operation, logFile)
 		return nil
 	}
 	if !r.Force && targetCacheable(target) &&
@@ -270,6 +267,9 @@ func targetRuntimeContext(
 
 func targetRuntimeError(ctx context.Context, target *Target) error {
 	if ctx.Err() == context.DeadlineExceeded {
+		if target.Spec().Runtime.Timeout <= 0 {
+			return ctx.Err()
+		}
 		return fmt.Errorf(
 			"target %q timed out after %s",
 			target.Name,
@@ -283,12 +283,19 @@ func (r Runner) finishNoopTarget(
 	s *Session,
 	target *Target,
 	fingerprint string,
+	operation string,
 	logFile io.Writer,
 ) {
-	if len(target.DependsOn) > 0 {
+	switch {
+	case operation != "":
+		if _, ok := target.Spec().Body.(model.PipelineSpec); !ok {
+			s.printf(target, "[%s] %s\n", target.Name, operation)
+		}
+		logf(logFile, "[%s] %s\n", target.Name, operation)
+	case len(target.DependsOn) > 0:
 		s.printf(target, "[%s] aggregate\n", target.Name)
 		logf(logFile, "[%s] aggregate\n", target.Name)
-	} else {
+	default:
 		s.printf(target, "[%s] noop\n", target.Name)
 		logf(logFile, "[%s] noop\n", target.Name)
 	}

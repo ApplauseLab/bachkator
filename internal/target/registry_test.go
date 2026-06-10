@@ -44,9 +44,14 @@ func TestTargetRegistryReportsMissingHandler(t *testing.T) {
 	}
 }
 
-func TestBuiltinTargetRegistryWiresShellImageAndPipeline(t *testing.T) {
+func TestBuiltinTargetRegistryWiresShellImagePipelineAndGroup(t *testing.T) {
 	registry := BuiltinTargetRegistry()
-	for _, targetType := range []model.TargetType{model.TargetTypeShell, model.TargetTypeImage, model.TargetTypePipeline} {
+	for _, targetType := range []model.TargetType{
+		model.TargetTypeShell,
+		model.TargetTypeImage,
+		model.TargetTypePipeline,
+		model.TargetTypeGroup,
+	} {
 		if _, err := registry.Handler(targetType); err != nil {
 			t.Fatalf("handler for %q: %v", targetType, err)
 		}
@@ -109,6 +114,26 @@ func TestBuiltinTargetRegistryWiresShellImageAndPipeline(t *testing.T) {
 	}
 	if desc.Operation != "pipeline: shell/a -> shell/b" {
 		t.Fatalf("pipeline operation = %q", desc.Operation)
+	}
+
+	group, err := registry.Handler(model.TargetTypeGroup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	desc, err = group.Describe(
+		context.Background(),
+		DescribeRequest{
+			Spec: model.TargetSpec{
+				Name: "group/ci",
+				Body: model.GroupSpec{Targets: []string{"shell/lint", "shell/test"}},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if desc.Operation != "group: shell/lint, shell/test" {
+		t.Fatalf("group operation = %q", desc.Operation)
 	}
 }
 

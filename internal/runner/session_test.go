@@ -16,6 +16,10 @@ func TestSessionCompletesDryRunWithoutPersistingState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	execGraph, err := buildExecutionGraph(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var out bytes.Buffer
 	run := newRunRecord(project, "build", true, false)
 	s := newSession(
@@ -24,6 +28,7 @@ func TestSessionCompletesDryRunWithoutPersistingState(t *testing.T) {
 		state,
 		&run,
 		plan,
+		execGraph,
 		GitContext{},
 		nil,
 	)
@@ -51,6 +56,10 @@ func TestSessionTargetLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	execGraph, err := buildExecutionGraph(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
 	run := newRunRecord(project, "build", true, false)
 	s := newSession(
 		Runner{DryRun: true, Stdout: &bytes.Buffer{}, Stderr: &bytes.Buffer{}},
@@ -58,6 +67,7 @@ func TestSessionTargetLifecycle(t *testing.T) {
 		state,
 		&run,
 		plan,
+		execGraph,
 		GitContext{},
 		nil,
 	)
@@ -81,6 +91,10 @@ func TestSessionRecordsSyntheticPreflightFailureLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	execGraph, err := buildExecutionGraph(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
 	run := newRunRecord(project, "build", false, false)
 	s := newSession(
 		Runner{Stdout: &bytes.Buffer{}, Stderr: &bytes.Buffer{}},
@@ -88,6 +102,7 @@ func TestSessionRecordsSyntheticPreflightFailureLog(t *testing.T) {
 		state,
 		&run,
 		plan,
+		execGraph,
 		GitContext{},
 		nil,
 	)
@@ -129,6 +144,10 @@ func TestSessionFingerprintState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	execGraph, err := buildExecutionGraph(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
 	run := newRunRecord(project, "build", true, false)
 	s := newSession(
 		Runner{DryRun: true, Stdout: &bytes.Buffer{}, Stderr: &bytes.Buffer{}},
@@ -136,6 +155,7 @@ func TestSessionFingerprintState(t *testing.T) {
 		state,
 		&run,
 		plan,
+		execGraph,
 		GitContext{},
 		nil,
 	)

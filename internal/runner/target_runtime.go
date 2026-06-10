@@ -320,6 +320,10 @@ func targetOperationFingerprintParts(spec model.TargetSpec) map[string]string {
 		return map[string]string{
 			"steps": strings.Join(body.Steps, "\x00"),
 		}
+	case model.GroupSpec:
+		return map[string]string{
+			"targets": strings.Join(body.Targets, "\x00"),
+		}
 	default:
 		return nil
 	}

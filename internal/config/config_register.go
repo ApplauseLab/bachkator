@@ -39,10 +39,11 @@ func registerTargets(
 	shells []*Target,
 	images []*Target,
 	pipelines []*Target,
+	groups []*Target,
 	variables map[string]string,
 ) error {
 	targetBaseEnv := projectRuntimeEnv(project)
-	targetRefs := targetRefEvalContext(shells, images, pipelines)
+	targetRefs := targetRefEvalContext(shells, images, pipelines, groups)
 	for _, shell := range shells {
 		shell.Name = "shell/" + shell.Name
 		if err := resolveTargetExtraAttributes(shell, targetRefs); err != nil {
@@ -89,6 +90,19 @@ func registerTargets(
 		}
 		project.Targets[pipeline.Name] = pipeline
 	}
+	for _, group := range groups {
+		group.Name = "group/" + group.Name
+		if err := resolveTargetExtraAttributes(group, targetRefs); err != nil {
+			return err
+		}
+		if err := validateTargetMetadata(group); err != nil {
+			return err
+		}
+		if _, exists := project.Targets[group.Name]; exists {
+			return fmt.Errorf("duplicate target %q", group.Name)
+		}
+		project.Targets[group.Name] = group
+	}
 	return nil
 }
 
@@ -104,6 +118,7 @@ func resolveTargetExtraAttributes(target *Target, targetRefs *hcl.EvalContext) e
 				{Name: "outputs"},
 				{Name: "depends_on"},
 				{Name: "steps"},
+				{Name: "targets"},
 			},
 		},
 	)
@@ -161,6 +176,13 @@ func resolveTargetExtraAttributes(target *Target, targetRefs *hcl.EvalContext) e
 			return fmt.Errorf("target %q steps: %w", target.Name, err)
 		}
 		target.Steps = steps
+	}
+	if attr, ok := content.Attributes["targets"]; ok {
+		targets, err := decodeTargetRefList(attr, targetRefs)
+		if err != nil {
+			return fmt.Errorf("target %q targets: %w", target.Name, err)
+		}
+		target.Targets = targets
 	}
 	return nil
 }
@@ -564,8 +586,14 @@ func wireProducedInputs(project *Project) error {
 				return fmt.Errorf("target %q has missing pipeline step %q", spec.Name, step)
 			}
 		}
+		group, _ := spec.Body.(model.GroupSpec)
+		for _, member := range group.Targets {
+			if _, exists := project.Targets[member]; !exists {
+				return fmt.Errorf("target %q has missing group member %q", spec.Name, member)
+			}
+		}
 	}
-	if err := validatePipelineStepCycles(project); err != nil {
+	if err := validateCompositeTargetCycles(project); err != nil {
 		return err
 	}
 	if project.DefaultTarget != "" {
@@ -577,13 +605,13 @@ func wireProducedInputs(project *Project) error {
 	return nil
 }
 
-func validatePipelineStepCycles(project *Project) error {
+func validateCompositeTargetCycles(project *Project) error {
 	visiting := map[string]bool{}
 	visited := map[string]bool{}
 	var visit func(string) error
 	visit = func(name string) error {
 		if visiting[name] {
-			return fmt.Errorf("pipeline cycle includes %q", name)
+			return fmt.Errorf("composite target cycle includes %q", name)
 		}
 		if visited[name] {
 			return nil
@@ -592,13 +620,9 @@ func validatePipelineStepCycles(project *Project) error {
 		if target == nil {
 			return nil
 		}
-		pipeline, ok := target.Spec().Body.(model.PipelineSpec)
-		if !ok {
-			return nil
-		}
 		visiting[name] = true
-		for _, step := range pipeline.Steps {
-			if err := visit(step); err != nil {
+		for _, child := range compositeChildren(target) {
+			if err := visit(child); err != nil {
 				return err
 			}
 		}
@@ -607,11 +631,25 @@ func validatePipelineStepCycles(project *Project) error {
 		return nil
 	}
 	for name, target := range project.Targets {
-		if _, ok := target.Spec().Body.(model.PipelineSpec); ok {
+		if len(compositeChildren(target)) > 0 {
 			if err := visit(name); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func compositeChildren(target *Target) []string {
+	if target == nil {
+		return nil
+	}
+	switch body := target.Spec().Body.(type) {
+	case model.PipelineSpec:
+		return body.Steps
+	case model.GroupSpec:
+		return body.Targets
+	default:
+		return nil
+	}
 }

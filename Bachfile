@@ -14,6 +14,10 @@ var "release_version" {
   default = ""
 }
 
+var "bats_version" {
+  default = "v1.12.0"
+}
+
 # Example computed release/image tag:
 # var "image_tag" {
 #   default = "${git_short_sha()}${git_dirty_suffix()}"
@@ -31,6 +35,22 @@ input "file" "release_sources" {
   srcs = [input.file.go_sources, "scripts/build-release-archive.sh"]
 }
 
+input "file" "e2e_sources" {
+  srcs = [input.file.go_sources, "test/e2e", "scripts/run-bats-e2e.sh"]
+}
+
+shell "install-bats" {
+  command = [
+    "sh",
+    "-c",
+    "rm -rf tools/bats-core tools/bats-core.tar.gz && mkdir -p tools && curl -fsSL \"https://github.com/bats-core/bats-core/archive/refs/tags/${var.bats_version}.tar.gz\" -o tools/bats-core.tar.gz && mkdir -p tools/bats-core && tar -xzf tools/bats-core.tar.gz --strip-components=1 -C tools/bats-core && rm tools/bats-core.tar.gz",
+  ]
+  tools = [{
+    name = "curl"
+  }]
+  outputs = ["tools/bats-core/bin/bats"]
+}
+
 shell "docs-generate" {
   description = "Generate reference documentation from fragments"
   command     = ["go", "run", "./cmd/bach-docs-gen"]
@@ -43,6 +63,27 @@ shell "test" {
   inputs  = [input.file.go_sources]
   outputs = {
     coverage = "$(RUN_DIRECTORY)/coverage.out"
+  }
+}
+
+shell "e2e" {
+  depends_on = [shell.build, shell.install-bats]
+  command    = ["sh", "scripts/run-bats-e2e.sh"]
+  inputs     = [input.file.e2e_sources]
+  outputs = {
+    junit = "$(RUN_DIRECTORY)/bats-junit.xml"
+  }
+}
+
+quality "shell.e2e" {
+  junit {
+    path   = shell.e2e.outputs.junit
+    format = "junit-xml"
+  }
+
+  quality_gate {
+    metric = "tests.failed"
+    max    = 0
   }
 }
 

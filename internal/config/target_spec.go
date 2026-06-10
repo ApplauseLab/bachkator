@@ -12,6 +12,7 @@ const (
 	TargetTypeShell    = model.TargetTypeShell
 	TargetTypeImage    = model.TargetTypeImage
 	TargetTypePipeline = model.TargetTypePipeline
+	TargetTypeGroup    = model.TargetTypeGroup
 )
 
 type TargetSpec = model.TargetSpec
@@ -25,6 +26,7 @@ type TargetBody = model.TargetBody
 type ShellSpec = model.ShellSpec
 type ImageSpec = model.ImageSpec
 type PipelineSpec = model.PipelineSpec
+type GroupSpec = model.GroupSpec
 type TargetContract = model.TargetContract
 type CompletionCheckSpec = model.CompletionCheckSpec
 
@@ -82,6 +84,10 @@ func (t *Target) body() TargetBody {
 	case TargetTypePipeline:
 		return PipelineSpec{
 			Steps: append([]string(nil), t.Steps...),
+		}
+	case TargetTypeGroup:
+		return GroupSpec{
+			Targets: append([]string(nil), t.Targets...),
 		}
 	default:
 		return ShellSpec{
@@ -183,6 +189,10 @@ func (t *Target) targetType() TargetType {
 	switch {
 	case strings.HasPrefix(t.Name, "image/"):
 		return TargetTypeImage
+	case strings.HasPrefix(t.Name, "group/"):
+		return TargetTypeGroup
+	case strings.HasPrefix(t.Name, "pipeline/"):
+		return TargetTypePipeline
 	case len(t.Steps) > 0:
 		return TargetTypePipeline
 	default:

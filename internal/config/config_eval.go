@@ -52,6 +52,7 @@ func buildEvalContext(
 	shellObjects := map[string]cty.Value{}
 	imageObjects := map[string]cty.Value{}
 	pipelineObjects := map[string]cty.Value{}
+	groupObjects := map[string]cty.Value{}
 	pluginObjects := map[string]cty.Value{}
 	resourceObjects := map[string]cty.Value{}
 	variableObjects := map[string]cty.Value{}
@@ -67,6 +68,7 @@ func buildEvalContext(
 			{Type: "shell", LabelNames: []string{"name"}},
 			{Type: "image", LabelNames: []string{"name"}},
 			{Type: "pipeline", LabelNames: []string{"name"}},
+			{Type: "group", LabelNames: []string{"name"}},
 		},
 	}
 	content, _, _ := body.PartialContent(schema)
@@ -100,6 +102,13 @@ func buildEvalContext(
 		}
 		name := block.Labels[0]
 		pipelineObjects[name] = cty.StringVal("pipeline." + name)
+	}
+	for _, block := range content.Blocks {
+		if block.Type != "group" {
+			continue
+		}
+		name := block.Labels[0]
+		groupObjects[name] = cty.StringVal("group." + name)
 	}
 	for _, block := range content.Blocks {
 		if block.Type != "shell" {
@@ -153,6 +162,7 @@ func buildEvalContext(
 		"shell":    cty.ObjectVal(shellObjects),
 		"image":    cty.ObjectVal(imageObjects),
 		"pipeline": cty.ObjectVal(pipelineObjects),
+		"group":    cty.ObjectVal(groupObjects),
 		"plugin":   cty.ObjectVal(pluginObjects),
 		"resource": cty.ObjectVal(resourceObjects),
 		"var":      cty.ObjectVal(variableObjects),
@@ -167,11 +177,13 @@ func targetRefEvalContext(
 	shells []*Target,
 	images []*Target,
 	pipelines []*Target,
+	groups []*Target,
 ) *hcl.EvalContext {
 	values := map[string]cty.Value{
 		"shell":    targetRefObjects("shell", shells),
 		"image":    targetRefObjects("image", images),
 		"pipeline": targetRefObjects("pipeline", pipelines),
+		"group":    targetRefObjects("group", groups),
 	}
 	return &hcl.EvalContext{Variables: values}
 }

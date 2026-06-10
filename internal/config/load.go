@@ -86,7 +86,7 @@ func LoadWithOptions(path string, options LoadOptions) (*Project, error) {
 		Producers:        map[string]string{},
 		Targets: make(
 			map[string]*Target,
-			len(cfg.Shells)+len(cfg.Images)+len(cfg.Pipelines),
+			len(cfg.Shells)+len(cfg.Images)+len(cfg.Pipelines)+len(cfg.Groups),
 		),
 		Aliases: make(map[string]*Alias, len(cfg.Aliases)),
 	}
@@ -101,6 +101,7 @@ func LoadWithOptions(path string, options LoadOptions) (*Project, error) {
 		cfg.Shells,
 		cfg.Images,
 		cfg.Pipelines,
+		cfg.Groups,
 		variables,
 	); err != nil {
 		return nil, err

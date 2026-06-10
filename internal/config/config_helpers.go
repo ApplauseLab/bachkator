@@ -55,7 +55,7 @@ func canonicalTargetRef(ref string) (string, error) {
 		)
 	}
 	switch parts[0] {
-	case "shell", "image", "pipeline":
+	case "shell", "image", "pipeline", "group":
 		return parts[0] + "/" + parts[1], nil
 	default:
 		return "", fmt.Errorf("invalid target reference %q: unknown target type %q", ref, parts[0])

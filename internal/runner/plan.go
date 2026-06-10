@@ -14,6 +14,8 @@ type Plan struct {
 	Order                   []string
 	DependencyEdges         []PlanEdge
 	PipelineEdges           []PlanEdge
+	GroupEdges              []PlanEdge
+	CompositeEdges          []PlanTypedEdge
 	EffectiveRisk           PlannedRisk
 	Tools                   []PlannedToolRequirement
 	Preflights              []PlannedPreflightCheck
@@ -23,6 +25,12 @@ type Plan struct {
 type PlanEdge struct {
 	From string
 	To   string
+}
+
+type PlanTypedEdge struct {
+	From string
+	To   string
+	Kind string
 }
 
 type PlannedRisk struct {
@@ -67,6 +75,15 @@ func BuildPlan(project *Project, name string) (*Plan, error) {
 		pipeline, _ := target.Spec().Body.(model.PipelineSpec)
 		return pipeline.Steps
 	})
+	plan.GroupEdges = plan.edges(func(target *Target) []string {
+		group, _ := target.Spec().Body.(model.GroupSpec)
+		return group.Targets
+	})
+	plan.CompositeEdges = appendTypedEdges(plan.PipelineEdges, "pipeline_step")
+	plan.CompositeEdges = append(
+		plan.CompositeEdges,
+		appendTypedEdges(plan.GroupEdges, "group_member")...,
+	)
 	plan.EffectiveRisk = plan.effectiveRisk()
 	plan.Tools = plan.collectTools()
 	plan.Preflights = plan.collectPreflights()
@@ -78,6 +95,9 @@ func (p *Plan) Target(name string) *Target {
 }
 
 func (p *Plan) ScheduledTargets() map[string]*Target {
+	// ScheduledTargets is the dependency-only closure used by legacy callers.
+	// Runtime execution uses executionGraph so pipeline/group members and virtual
+	// lifecycle vertices are represented explicitly.
 	names := map[string]bool{}
 	p.collectScheduledTarget(p.TargetName, names)
 	targets := make(map[string]*Target, len(names))
@@ -150,6 +170,12 @@ func (p *runPlanner) visit(name string) error {
 			return err
 		}
 	}
+	group, _ := target.Spec().Body.(model.GroupSpec)
+	for _, member := range group.Targets {
+		if err := p.visit(member); err != nil {
+			return err
+		}
+	}
 	p.visiting[name] = false
 	p.targets[name] = target
 	p.order = append(p.order, name)
@@ -174,6 +200,14 @@ func (p *Plan) edges(children func(*Target) []string) []PlanEdge {
 		return orderIndex[edges[i].To] < orderIndex[edges[j].To]
 	})
 	return edges
+}
+
+func appendTypedEdges(edges []PlanEdge, kind string) []PlanTypedEdge {
+	typed := make([]PlanTypedEdge, 0, len(edges))
+	for _, edge := range edges {
+		typed = append(typed, PlanTypedEdge{From: edge.From, To: edge.To, Kind: kind})
+	}
+	return typed
 }
 
 func (p *Plan) effectiveRisk() PlannedRisk {

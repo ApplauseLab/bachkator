@@ -64,6 +64,20 @@ func pipelineTarget(name string, steps []string, options ...targetOption) *Targe
 	return target
 }
 
+func groupTarget(name string, targets []string, options ...targetOption) *Target {
+	target := &Target{
+		Name: name,
+		SpecValue: model.TargetSpec{
+			Name: name,
+			Body: model.GroupSpec{Targets: append([]string(nil), targets...)},
+		},
+	}
+	for _, option := range options {
+		option(target)
+	}
+	return target
+}
+
 func withInputs(inputs ...string) targetOption {
 	return func(target *Target) {
 		target.SpecValue.Cache.Inputs = append([]string(nil), inputs...)

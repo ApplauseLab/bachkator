@@ -9,18 +9,26 @@ import (
 )
 
 type dryRunPlanJSON struct {
-	Target           string                 `json:"target"`
-	SelectedProfiles []string               `json:"selected_profiles"`
-	TargetOrder      []string               `json:"target_order"`
-	DependencyEdges  []dryRunPlanEdgeJSON   `json:"dependency_edges"`
-	PipelineEdges    []dryRunPlanEdgeJSON   `json:"pipeline_edges,omitempty"`
-	EffectiveRisk    dryRunPlanRiskJSON     `json:"effective_risk"`
-	Targets          []dryRunPlanTargetJSON `json:"targets"`
+	Target           string                    `json:"target"`
+	SelectedProfiles []string                  `json:"selected_profiles"`
+	TargetOrder      []string                  `json:"target_order"`
+	DependencyEdges  []dryRunPlanEdgeJSON      `json:"dependency_edges"`
+	PipelineEdges    []dryRunPlanEdgeJSON      `json:"pipeline_edges,omitempty"`
+	GroupEdges       []dryRunPlanEdgeJSON      `json:"group_edges,omitempty"`
+	CompositeEdges   []dryRunPlanTypedEdgeJSON `json:"composite_edges,omitempty"`
+	EffectiveRisk    dryRunPlanRiskJSON        `json:"effective_risk"`
+	Targets          []dryRunPlanTargetJSON    `json:"targets"`
 }
 
 type dryRunPlanEdgeJSON struct {
 	From string `json:"from"`
 	To   string `json:"to"`
+}
+
+type dryRunPlanTypedEdgeJSON struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+	Kind string `json:"kind"`
 }
 
 type dryRunPlanRiskJSON struct {
@@ -37,6 +45,7 @@ type dryRunPlanTargetJSON struct {
 	WorkDir    string                  `json:"workdir,omitempty"`
 	DependsOn  []string                `json:"depends_on,omitempty"`
 	Steps      []string                `json:"steps,omitempty"`
+	Targets    []string                `json:"targets,omitempty"`
 	Lock       string                  `json:"lock,omitempty"`
 	Risks      dryRunPlanRiskJSON      `json:"risks"`
 	Cache      dryRunPlanCacheJSON     `json:"cache"`
@@ -94,6 +103,8 @@ func (r Runner) writeDryRunPlanJSON(
 		TargetOrder:      append([]string(nil), plan.Order...),
 		DependencyEdges:  dryRunEdges(plan.DependencyEdges),
 		PipelineEdges:    dryRunEdges(plan.PipelineEdges),
+		GroupEdges:       dryRunEdges(plan.GroupEdges),
+		CompositeEdges:   dryRunTypedEdges(plan.CompositeEdges),
 		EffectiveRisk:    dryRunRisk(plan.EffectiveRisk),
 		Targets:          planTargets,
 	}
@@ -160,6 +171,7 @@ func (r Runner) dryRunPlanTarget(
 	}
 	shell, _ := spec.Body.(model.ShellSpec)
 	pipeline, _ := spec.Body.(model.PipelineSpec)
+	group, _ := spec.Body.(model.GroupSpec)
 	return dryRunPlanTargetJSON{
 		Name:      target.Name,
 		Type:      spec.TargetType(),
@@ -167,6 +179,7 @@ func (r Runner) dryRunPlanTarget(
 		WorkDir:   shell.WorkDir,
 		DependsOn: append([]string(nil), target.DependsOn...),
 		Steps:     append([]string(nil), pipeline.Steps...),
+		Targets:   append([]string(nil), group.Targets...),
 		Lock:      spec.Runtime.Lock,
 		Risks: dryRunRisk(
 			PlannedRisk{
@@ -194,6 +207,14 @@ func dryRunEdges(edges []PlanEdge) []dryRunPlanEdgeJSON {
 	out := make([]dryRunPlanEdgeJSON, 0, len(edges))
 	for _, edge := range edges {
 		out = append(out, dryRunPlanEdgeJSON(edge))
+	}
+	return out
+}
+
+func dryRunTypedEdges(edges []PlanTypedEdge) []dryRunPlanTypedEdgeJSON {
+	out := make([]dryRunPlanTypedEdgeJSON, 0, len(edges))
+	for _, edge := range edges {
+		out = append(out, dryRunPlanTypedEdgeJSON(edge))
 	}
 	return out
 }

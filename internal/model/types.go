@@ -187,6 +187,7 @@ const (
 	TargetTypeShell    TargetType = "shell"
 	TargetTypeImage    TargetType = "image"
 	TargetTypePipeline TargetType = "pipeline"
+	TargetTypeGroup    TargetType = "group"
 )
 
 type TargetSpec struct {
@@ -271,6 +272,12 @@ type PipelineSpec struct {
 }
 
 func (PipelineSpec) TargetType() TargetType { return TargetTypePipeline }
+
+type GroupSpec struct {
+	Targets []string
+}
+
+func (GroupSpec) TargetType() TargetType { return TargetTypeGroup }
 
 type TargetContract struct {
 	SuccessWhen []CompletionCheckSpec

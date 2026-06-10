@@ -133,6 +133,7 @@ type Target struct {
 	OutputMap            map[string]string
 	Produces             []string `hcl:"produces,optional"`
 	Steps                []string
+	Targets              []string
 	Env                  []string           `hcl:"env,optional"`
 	EnvBlocks            []*EnvBlock        `hcl:"env,block"`
 	SuccessWhen          []*CompletionCheck `hcl:"success_when,block"`
@@ -170,6 +171,7 @@ type fileConfig struct {
 	Shells    []*Target        `hcl:"shell,block"`
 	Images    []*Target        `hcl:"image,block"`
 	Pipelines []*Target        `hcl:"pipeline,block"`
+	Groups    []*Target        `hcl:"group,block"`
 }
 
 type projectBlock struct {

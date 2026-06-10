@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	gitpkg "github.com/applause/bachkator/internal/git"
 	"github.com/applause/bachkator/internal/model"
@@ -58,6 +57,10 @@ func (r Runner) Run(ctx context.Context, project *Project, name string) error {
 	if err != nil {
 		return err
 	}
+	execGraph, err := buildExecutionGraph(plan)
+	if err != nil {
+		return err
+	}
 	if !r.DryRun && !r.Yes {
 		if plan.EffectiveRisk.RequiresConfirmation {
 			return fmt.Errorf(
@@ -77,7 +80,16 @@ func (r Runner) Run(ctx context.Context, project *Project, name string) error {
 	run := newRunRecord(project, plan.TargetName, r.DryRun, r.Force)
 	state.Runs = append(state.Runs, run)
 	runIndex := len(state.Runs) - 1
-	session := newSession(r, project, state, &state.Runs[runIndex], plan, gitContext, dotenv)
+	session := newSession(
+		r,
+		project,
+		state,
+		&state.Runs[runIndex],
+		plan,
+		execGraph,
+		gitContext,
+		dotenv,
+	)
 	if err := reportOrCheckPlannedRequiredTools(ctx, r.Stdout, r.DryRun, plan.Tools); err != nil {
 		var checkErr ToolCheckError
 		if errors.As(err, &checkErr) {
@@ -98,75 +110,11 @@ func (r Runner) Run(ctx context.Context, project *Project, name string) error {
 		session.completeCheckFailedRun("preflight-failed")
 		return err
 	}
+	if err := session.printPipelineHeaders(ctx, plan.TargetName, map[string]bool{}); err != nil {
+		return session.completeFailedRun(err)
+	}
 	if err := r.runTargets(ctx, session); err != nil {
 		return session.completeFailedRun(err)
 	}
 	return session.completeRun("success")
-}
-
-func (r Runner) runPipeline(ctx context.Context, s *Session, target *Target) error {
-	ctx, cancel := targetRuntimeContext(ctx, target)
-	defer cancel()
-	runtimeEnv := commandEnv(s.gitContext, s.dotenv, projectRuntimeEnv(s.project), target.Env)
-	description, err := targetOperation(ctx, target, runtimeEnv)
-	if err != nil {
-		return err
-	}
-	targetRun := s.startTarget(target, description.Operation)
-	logFile, err := s.openTargetLog(target.Name)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = logFile.Close() }()
-	logf(
-		logFile,
-		"[%s] run=%s target=%s\n",
-		targetRun.StartedAt.Format(time.RFC3339Nano),
-		s.run.ID,
-		target.Name,
-	)
-	fingerprint, fingerprintParts, err := targetFingerprintParts(
-		s.project,
-		target,
-		s.gitContext,
-		s.dotenv,
-		nil,
-	)
-	if err != nil {
-		s.finishTarget(target.Name, "failed")
-		return err
-	}
-	s.printf(target, "[%s] %s\n", targetLabel(target), description.Operation)
-	logf(logFile, "[%s] %s\n", targetLabel(target), description.Operation)
-
-	pipeline, _ := target.Spec().Body.(model.PipelineSpec)
-	for _, step := range pipeline.Steps {
-		if err := targetRuntimeError(ctx, target); err != nil {
-			s.finishTarget(target.Name, "failed")
-			return err
-		}
-		stepPlan, err := BuildPlan(s.project, step)
-		if err != nil {
-			s.finishTarget(target.Name, "failed")
-			return err
-		}
-		if err := r.runTargetsWithLocks(ctx, s, stepPlan); err != nil {
-			s.finishTarget(target.Name, "failed")
-			return err
-		}
-	}
-
-	s.rememberFingerprint(target.Name, fingerprint)
-	if !s.runner.DryRun {
-		record := StateRecord{
-			Fingerprint:      fingerprint,
-			FingerprintParts: fingerprintParts,
-			CompletedAt:      time.Now().UTC(),
-		}
-		s.stateMu.Lock()
-		s.markTargetDirty(target.Name, record)
-		s.stateMu.Unlock()
-	}
-	s.finishTarget(target.Name, "success")
-	return nil
 }

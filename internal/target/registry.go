@@ -70,6 +70,7 @@ func BuiltinTargetRegistry() *TargetRegistry {
 	mustRegisterTargetHandler(registry, shellHandler{})
 	mustRegisterTargetHandler(registry, imageHandler{})
 	mustRegisterTargetHandler(registry, pipelineHandler{})
+	mustRegisterTargetHandler(registry, groupHandler{})
 	return registry
 }
 
