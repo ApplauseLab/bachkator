@@ -1,12 +1,8 @@
 package factorydaemon
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
 	"sync"
 	"time"
 
@@ -18,24 +14,13 @@ import (
 	"github.com/applauselab/bachkator/pkg/triggerprotocol"
 )
 
-const triggerCallTimeout = 30 * time.Second
-
 type triggerPoller struct {
 	service         Service
 	factoryService  factorypkg.Service
 	factory         string
 	trigger         *config.FactoryProviderTrigger
 	defaultWorkflow string
-	session         *triggerSession
-}
-
-type triggerSession struct {
-	mu     sync.Mutex
-	client *triggerprotocol.Client
-	cmd    *exec.Cmd
-	stdin  io.WriteCloser
-	cancel context.CancelFunc
-	stderr *cappedBuffer
+	session         *providerSession[*triggerprotocol.Client]
 }
 
 func (s Service) startProviderTriggers(ctx context.Context) <-chan error {
@@ -64,7 +49,13 @@ func (s Service) startProviderTriggers(ctx context.Context) <-chan error {
 				factory:         s.Factory.Name,
 				trigger:         trigger,
 				defaultWorkflow: s.defaultWorkflow(),
-				session:         &triggerSession{},
+				session: newProviderSession(
+					trigger.Name,
+					trigger.Command,
+					s.ConfigProject.Root,
+					triggerprotocol.NewClient,
+					newTriggerDial(trigger.Name, s.Factory.Name, trigger.Config),
+				),
 			}
 			wg.Add(1)
 			go func() {
@@ -77,6 +68,35 @@ func (s Service) startProviderTriggers(ctx context.Context) <-chan error {
 	return errCh
 }
 
+func newTriggerDial(
+	name string,
+	factory string,
+	providerConfig map[string]string,
+) func(context.Context, *triggerprotocol.Client) error {
+	return func(ctx context.Context, client *triggerprotocol.Client) error {
+		result, err := client.Handshake(ctx, triggerprotocol.HandshakeParams{
+			Protocol: triggerprotocol.ProtocolVersion,
+			Factory:  factory,
+			Trigger:  name,
+			Config:   providerConfig,
+		})
+		if err != nil {
+			return err
+		}
+		if result.Protocol != triggerprotocol.ProtocolVersion {
+			return fmt.Errorf(
+				"trigger provider %q returned unsupported protocol %q",
+				name,
+				result.Protocol,
+			)
+		}
+		if !hasCapability(result.Capabilities, triggerprotocol.CapabilityPoll) {
+			return fmt.Errorf("trigger provider %q does not support poll", name)
+		}
+		return nil
+	}
+}
+
 func (s Service) defaultWorkflow() string {
 	if len(s.Factory.Workflows) == 1 && s.Factory.Workflows[0] != nil {
 		return s.Factory.Workflows[0].Name
@@ -85,7 +105,7 @@ func (s Service) defaultWorkflow() string {
 }
 
 func (p *triggerPoller) run(ctx context.Context) {
-	defer p.closeSession()
+	defer p.session.close()
 	ticker := time.NewTicker(p.trigger.PollIntervalDuration())
 	defer ticker.Stop()
 	for {
@@ -99,18 +119,19 @@ func (p *triggerPoller) run(ctx context.Context) {
 }
 
 func (p *triggerPoller) poll(ctx context.Context) {
-	if err := p.ensureSession(ctx); err != nil {
+	client, err := p.session.get(ctx)
+	if err != nil {
 		p.logf("trigger provider %q handshake failed: %v", p.trigger.Name, err)
 		return
 	}
 	cursor, err := p.service.Backend.Factory.GetTriggerCursor(ctx, p.factory, p.trigger.Name)
 	if err != nil {
 		p.logf("trigger provider %q cursor read failed: %v", p.trigger.Name, err)
-		p.invalidateSession()
+		p.session.invalidate()
 		return
 	}
-	pollCtx, cancel := context.WithTimeout(ctx, triggerCallTimeout)
-	result, err := p.session.client.Poll(pollCtx, triggerprotocol.PollParams{
+	pollCtx, cancel := context.WithTimeout(ctx, providerCallTimeout)
+	result, err := client.Poll(pollCtx, triggerprotocol.PollParams{
 		Cursor: cursor.Cursor,
 		Config: p.trigger.Config,
 	})
@@ -118,7 +139,7 @@ func (p *triggerPoller) poll(ctx context.Context) {
 	if err != nil {
 		p.logf("trigger provider %q poll failed: %v", p.trigger.Name, err)
 		p.recordErrorCursor(ctx, cursor.Cursor, err)
-		p.invalidateSession()
+		p.session.invalidate()
 		return
 	}
 	var sourceIDs []string
@@ -126,20 +147,20 @@ func (p *triggerPoller) poll(ctx context.Context) {
 		sourceIDs, err = p.processItems(ctx, result.Items)
 		if err != nil {
 			p.logf("trigger provider %q intake failed: %v", p.trigger.Name, err)
-			_ = p.nack(ctx, result.Cursor, err)
+			_ = p.nack(ctx, client, result.Cursor, err)
 			p.recordErrorCursor(ctx, cursor.Cursor, err)
 			return
 		}
 	}
 	if err := p.recordAckCursor(ctx, result.Cursor); err != nil {
 		p.logf("trigger provider %q cursor record failed: %v", p.trigger.Name, err)
-		_ = p.nack(ctx, result.Cursor, err)
+		_ = p.nack(ctx, client, result.Cursor, err)
 		return
 	}
 	if len(sourceIDs) > 0 || result.Cursor != cursor.Cursor {
-		if err := p.ack(ctx, result.Cursor, sourceIDs); err != nil {
+		if err := p.ack(ctx, client, result.Cursor, sourceIDs); err != nil {
 			p.logf("trigger provider %q ack failed: %v", p.trigger.Name, err)
-			p.invalidateSession()
+			p.session.invalidate()
 			return
 		}
 	}
@@ -178,19 +199,29 @@ func (p *triggerPoller) processItems(
 	return sourceIDs, nil
 }
 
-func (p *triggerPoller) ack(ctx context.Context, cursor string, sourceIDs []string) error {
-	ackCtx, cancel := context.WithTimeout(ctx, triggerCallTimeout)
+func (p *triggerPoller) ack(
+	ctx context.Context,
+	client *triggerprotocol.Client,
+	cursor string,
+	sourceIDs []string,
+) error {
+	ackCtx, cancel := context.WithTimeout(ctx, providerCallTimeout)
 	defer cancel()
-	return p.session.client.Ack(ackCtx, triggerprotocol.AckParams{
+	return client.Ack(ackCtx, triggerprotocol.AckParams{
 		Cursor:    cursor,
 		SourceIDs: sourceIDs,
 	})
 }
 
-func (p *triggerPoller) nack(ctx context.Context, cursor string, cause error) error {
-	nackCtx, cancel := context.WithTimeout(ctx, triggerCallTimeout)
+func (p *triggerPoller) nack(
+	ctx context.Context,
+	client *triggerprotocol.Client,
+	cursor string,
+	cause error,
+) error {
+	nackCtx, cancel := context.WithTimeout(ctx, providerCallTimeout)
 	defer cancel()
-	return p.session.client.Nack(nackCtx, triggerprotocol.NackParams{
+	return client.Nack(nackCtx, triggerprotocol.NackParams{
 		Cursor: cursor,
 		Reason: cause.Error(),
 	})
@@ -222,165 +253,19 @@ func (p *triggerPoller) recordErrorCursor(ctx context.Context, cursor string, ca
 	})
 }
 
-func (p *triggerPoller) ensureSession(ctx context.Context) error {
-	p.session.mu.Lock()
-	defer p.session.mu.Unlock()
-	if p.session.client != nil {
-		return nil
-	}
-	command, err := resolveTriggerCommand(p.trigger.Command)
-	if err != nil {
-		return err
-	}
-	cmdCtx, cancel := context.WithCancel(ctx)
-	cmd := exec.CommandContext(cmdCtx, command[0], command[1:]...)
-	cmd.Dir = p.service.ConfigProject.Root
-	cmd.Env = triggerEnvironment(p.trigger.Config)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		cancel()
-		return err
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		_ = stdin.Close()
-		cancel()
-		return err
-	}
-	stderrBuf := &cappedBuffer{limit: 64 * 1024}
-	cmd.Stderr = stderrBuf
-	if err := cmd.Start(); err != nil {
-		_ = stdin.Close()
-		_ = stdout.Close()
-		cancel()
-		return err
-	}
-	client := triggerprotocol.NewClient(stdout, stdin)
-	hsCtx, hsCancel := context.WithTimeout(ctx, triggerCallTimeout)
-	result, err := client.Handshake(hsCtx, triggerprotocol.HandshakeParams{
-		Protocol: triggerprotocol.ProtocolVersion,
-		Factory:  p.factory,
-		Trigger:  p.trigger.Name,
-		Config:   p.trigger.Config,
-	})
-	hsCancel()
-	if err != nil {
-		_ = stdin.Close()
-		_ = cmd.Wait()
-		cancel()
-		return err
-	}
-	if result.Protocol != triggerprotocol.ProtocolVersion {
-		_ = stdin.Close()
-		_ = cmd.Wait()
-		cancel()
-		return fmt.Errorf(
-			"trigger provider %q returned unsupported protocol %q",
-			p.trigger.Name,
-			result.Protocol,
-		)
-	}
-	if !hasTriggerCapability(result.Capabilities, triggerprotocol.CapabilityPoll) {
-		_ = stdin.Close()
-		_ = cmd.Wait()
-		cancel()
-		return fmt.Errorf("trigger provider %q does not support poll", p.trigger.Name)
-	}
-	p.session.client = client
-	p.session.cmd = cmd
-	p.session.stdin = stdin
-	p.session.cancel = cancel
-	p.session.stderr = stderrBuf
-	return nil
-}
-
-func (p *triggerPoller) invalidateSession() {
-	p.session.mu.Lock()
-	defer p.session.mu.Unlock()
-	p.session.client = nil
-}
-
-func (p *triggerPoller) closeSession() {
-	p.session.mu.Lock()
-	defer p.session.mu.Unlock()
-	if p.session.cancel != nil {
-		p.session.cancel()
-	}
-	if p.session.stdin != nil {
-		_ = p.session.stdin.Close()
-	}
-	if p.session.cmd != nil {
-		_ = p.session.cmd.Wait()
-	}
-	p.session.client = nil
-}
-
 func (p *triggerPoller) logf(format string, args ...any) {
-	_, _ = fmt.Fprintf(p.service.stderr(), "trigger: "+format+"\n", args...)
+	_, _ = fmt.Fprintf(
+		p.service.stderr(),
+		"trigger "+p.trigger.Name+": "+format+"\n",
+		args...,
+	)
 }
 
-func resolveTriggerCommand(command []string) ([]string, error) {
-	if len(command) == 0 {
-		return nil, fmt.Errorf("trigger provider command is empty")
-	}
-	if command[0] != "bach" {
-		return command, nil
-	}
-	executable, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-	resolved := append([]string{executable}, command[1:]...)
-	return resolved, nil
-}
-
-func triggerEnvironment(config map[string]string) []string {
-	env := []string{}
-	seen := map[string]struct{}{}
-	keys := []string{"PATH", "TMPDIR", "TEMP", "TMP"}
-	if config != nil && config["token_env"] != "" {
-		keys = append(keys, config["token_env"])
-	}
-	for _, key := range keys {
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		if value, ok := os.LookupEnv(key); ok {
-			env = append(env, key+"="+value)
-		}
-	}
-	return env
-}
-
-func hasTriggerCapability(
-	capabilities []triggerprotocol.Capability,
-	required triggerprotocol.Capability,
-) bool {
+func hasCapability[C ~string](capabilities []C, required C) bool {
 	for _, c := range capabilities {
 		if c == required {
 			return true
 		}
 	}
 	return false
-}
-
-type cappedBuffer struct {
-	buffer bytes.Buffer
-	limit  int
-	mu     sync.Mutex
-}
-
-func (b *cappedBuffer) Write(data []byte) (int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	available := b.limit - b.buffer.Len()
-	if available > 0 {
-		if len(data) > available {
-			_, _ = b.buffer.Write(data[:available])
-		} else {
-			_, _ = b.buffer.Write(data)
-		}
-	}
-	return len(data), nil
 }

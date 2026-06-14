@@ -61,6 +61,15 @@ func validateFactory(factory *Factory) error {
 	if len(factory.Triggers) > 1 {
 		return fmt.Errorf("factory %q must have at most one triggers block", factory.Name)
 	}
+	if len(factory.Approvals) > 1 {
+		return fmt.Errorf("factory %q must have at most one approvals block", factory.Name)
+	}
+	if err := validateApprovalProviders(
+		factory.Name,
+		factory.ApprovalProviders(),
+	); err != nil {
+		return err
+	}
 	if len(factory.Triggers) == 0 {
 		return nil
 	}
@@ -139,13 +148,6 @@ func validateFactoryWorkflow(factoryName string, workflow *FactoryWorkflow) erro
 				workflow.Name,
 			)
 		}
-		if implement.RequiresApproval != nil {
-			return fmt.Errorf(
-				"factory %q workflow %q implement does not support requires_approval",
-				factoryName,
-				workflow.Name,
-			)
-		}
 	}
 	if len(workflow.Merge) > 1 {
 		return fmt.Errorf(
@@ -154,20 +156,15 @@ func validateFactoryWorkflow(factoryName string, workflow *FactoryWorkflow) erro
 			workflow.Name,
 		)
 	}
-	if len(workflow.Merge) == 1 && workflow.Merge[0] != nil && workflow.Merge[0].Target == "" {
-		return fmt.Errorf(
-			"factory %q workflow %q merge.target is required",
-			factoryName,
-			workflow.Name,
-		)
-	}
-	if len(workflow.Merge) == 1 && workflow.Merge[0] != nil &&
-		workflow.Merge[0].RequiresApproval != nil {
-		return fmt.Errorf(
-			"factory %q workflow %q merge does not support requires_approval",
-			factoryName,
-			workflow.Name,
-		)
+	if len(workflow.Merge) == 1 && workflow.Merge[0] != nil {
+		merge := workflow.Merge[0]
+		if (merge.Target == "") == (merge.AgentTemplate == "") {
+			return fmt.Errorf(
+				"factory %q workflow %q merge requires exactly one of target or agent_template",
+				factoryName,
+				workflow.Name,
+			)
+		}
 	}
 	for _, phase := range workflow.Deploy {
 		if phase == nil {
@@ -248,6 +245,22 @@ func (w *FactoryWorkflow) PlanRequiresApproval() bool {
 	}
 	p := w.Plan[0].RequiresApproval
 	return p == nil || *p
+}
+
+func (w *FactoryWorkflow) ImplementRequiresApproval() bool {
+	if w == nil || len(w.Implement) == 0 || w.Implement[0] == nil {
+		return false
+	}
+	i := w.Implement[0].RequiresApproval
+	return i != nil && *i
+}
+
+func (w *FactoryWorkflow) MergeRequiresApproval() bool {
+	if w == nil || len(w.Merge) == 0 || w.Merge[0] == nil {
+		return false
+	}
+	m := w.Merge[0].RequiresApproval
+	return m != nil && *m
 }
 
 func (w *FactoryWorkflow) DeployRequiresApproval(name string) bool {
@@ -338,7 +351,15 @@ func validateFactoryWorkflowReferences(
 		}
 	}
 	if len(workflow.Merge) == 1 {
-		if err := validateFactoryTargetRef(project, workflow.Merge[0].Target); err != nil {
+		merge := workflow.Merge[0]
+		if merge.AgentTemplate != "" {
+			if err := validateFactoryAgentTemplateRef(
+				project,
+				merge.AgentTemplate,
+			); err != nil {
+				return fmt.Errorf("factory %q workflow %q merge: %w", factoryName, workflow.Name, err)
+			}
+		} else if err := validateFactoryTargetRef(project, merge.Target); err != nil {
 			return fmt.Errorf("factory %q workflow %q merge: %w", factoryName, workflow.Name, err)
 		}
 	}

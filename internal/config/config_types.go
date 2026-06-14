@@ -188,9 +188,10 @@ type AgentTemplate struct {
 }
 
 type Factory struct {
-	Name      string             `hcl:"name,label"`
-	Workflows []*FactoryWorkflow `hcl:"workflow,block"`
-	Triggers  []*FactoryTriggers `hcl:"triggers,block"`
+	Name      string              `hcl:"name,label"`
+	Workflows []*FactoryWorkflow  `hcl:"workflow,block"`
+	Approvals []*FactoryApprovals `hcl:"approvals,block"`
+	Triggers  []*FactoryTriggers  `hcl:"triggers,block"`
 }
 
 type FactoryWorkflow struct {
@@ -214,7 +215,8 @@ type FactoryImplementPhase struct {
 }
 
 type FactoryTargetPhase struct {
-	Target           string `hcl:"target"`
+	Target           string `hcl:"target,optional"`
+	AgentTemplate    string `hcl:"agent_template,optional"`
 	RequiresApproval *bool  `hcl:"requires_approval,optional"`
 }
 
@@ -243,6 +245,17 @@ type ProviderRoute struct {
 }
 
 type FactoryManualTrigger struct{}
+
+type FactoryApprovals struct {
+	Provider []*FactoryApprovalProvider `hcl:"provider,block"`
+}
+
+type FactoryApprovalProvider struct {
+	Name         string            `hcl:"name,label"`
+	Command      []string          `hcl:"command,optional"`
+	PollInterval string            `hcl:"poll_interval,optional"`
+	Config       map[string]string `hcl:"config,optional"`
+}
 
 type Target struct {
 	Name                 string `hcl:"name,label"`

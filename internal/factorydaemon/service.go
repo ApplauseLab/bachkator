@@ -110,6 +110,10 @@ func (s Service) Start(ctx context.Context, opts StartOptions) (StartResult, err
 	if len(s.Factory.ProviderTriggers()) > 0 {
 		triggerErr = s.startProviderTriggers(runCtx)
 	}
+	var approvalErr <-chan error
+	if len(s.Factory.ApprovalProviders()) > 0 {
+		approvalErr = s.startProviderApprovals(runCtx)
+	}
 	poll := time.NewTicker(opts.PollInterval)
 	defer poll.Stop()
 	for {
@@ -119,6 +123,10 @@ func (s Service) Start(ctx context.Context, opts StartOptions) (StartResult, err
 		case err := <-renewErr:
 			return result, err
 		case err := <-triggerErr:
+			if err != nil {
+				return result, err
+			}
+		case err := <-approvalErr:
 			if err != nil {
 				return result, err
 			}
@@ -133,6 +141,10 @@ func (s Service) Start(ctx context.Context, opts StartOptions) (StartResult, err
 		case err := <-renewErr:
 			return result, err
 		case err := <-triggerErr:
+			if err != nil {
+				return result, err
+			}
+		case err := <-approvalErr:
 			if err != nil {
 				return result, err
 			}
@@ -198,17 +210,38 @@ func (s Service) processOne(ctx context.Context, opts StartOptions) error {
 			return s.failItem(ctx, item, config.FactoryPhasePlan, err)
 		}
 	}
+	if workflow.Implement[0].RequiresApproval != nil && *workflow.Implement[0].RequiresApproval {
+		if err := s.ensureImplementApproval(ctx, item, attemptID, config.FactoryPhaseImplement); err != nil {
+			if errors.Is(err, bacherr.ErrWaitingApproval) {
+				return nil
+			}
+			return s.failItem(ctx, item, config.FactoryPhaseImplement, err)
+		}
+	}
 	if err := s.runImplementPhase(ctx, opts, item, attemptID, workflow, planPath); err != nil {
 		return s.failItem(ctx, item, config.FactoryPhaseImplement, err)
 	}
 	if len(workflow.Merge) == 1 {
-		if err := s.runTargetPhase(
+		merge := workflow.Merge[0]
+		if merge.RequiresApproval != nil && *merge.RequiresApproval {
+			if err := s.ensureMergeApproval(ctx, item, attemptID); err != nil {
+				if errors.Is(err, bacherr.ErrWaitingApproval) {
+					return nil
+				}
+				return s.failItem(ctx, item, config.FactoryPhaseMerge, err)
+			}
+		}
+		if merge.AgentTemplate != "" {
+			if err := s.runMergeAgentPhase(ctx, opts, item, attemptID, workflow, merge); err != nil {
+				return s.failItem(ctx, item, config.FactoryPhaseMerge, err)
+			}
+		} else if err := s.runTargetPhase(
 			ctx,
 			opts,
 			item,
 			attemptID,
 			config.FactoryPhaseMerge,
-			workflow.Merge[0].Target,
+			merge.Target,
 		); err != nil {
 			return s.failItem(ctx, item, config.FactoryPhaseMerge, err)
 		}
