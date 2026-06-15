@@ -11,8 +11,9 @@
 - Keep GitHub API access read-only; do not mutate issues, labels, comments, or repository state.
 - Read GitHub tokens from environment variables named by provider config. Never accept token values in
   Bachfile config and never log token values.
-- Keep Work Item mapping deterministic: stable source IDs, issue labels preserved for Factory routing, and
-  cursor advancement based on GitHub `updated_at` values.
+- Keep Work Item mapping deterministic: stable source IDs, issue labels preserved for Factory routing, cursor
+  advancement based on GitHub `updated_at` values, and duplicate suppression for issues at or before the
+  stored cursor.
 
 ## Verification
 

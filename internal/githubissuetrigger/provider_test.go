@@ -128,6 +128,49 @@ func TestProviderHandshakeValidatesConfig(t *testing.T) {
 	}
 }
 
+func TestProviderPollSkipsIssuesAtCursor(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode([]map[string]any{
+			{
+				"number":     42,
+				"html_url":   "https://github.com/acme/widgets/issues/42",
+				"title":      "Already delivered",
+				"state":      "open",
+				"labels":     []map[string]string{},
+				"user":       map[string]string{"login": "octo"},
+				"created_at": "2026-06-01T10:00:00Z",
+				"updated_at": "2026-06-02T10:00:00Z",
+			},
+		})
+	}))
+	defer server.Close()
+
+	provider := New(server.Client())
+	_, err := provider.Handshake(context.Background(), triggerprotocol.HandshakeParams{
+		Protocol: triggerprotocol.ProtocolVersion,
+		Config: map[string]string{
+			"repo":    "acme/widgets",
+			"api_url": server.URL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("handshake error = %v", err)
+	}
+
+	result, err := provider.Poll(context.Background(), triggerprotocol.PollParams{
+		Cursor: "2026-06-02T10:00:00Z",
+	})
+	if err != nil {
+		t.Fatalf("poll error = %v", err)
+	}
+	if result.Cursor != "2026-06-02T10:00:00Z" {
+		t.Fatalf("cursor = %q", result.Cursor)
+	}
+	if len(result.Items) != 0 {
+		t.Fatalf("items len = %d", len(result.Items))
+	}
+}
+
 func TestProviderPollReportsGitHubStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "bad credentials", http.StatusUnauthorized)
@@ -150,6 +193,35 @@ func TestProviderPollReportsGitHubStatus(t *testing.T) {
 		t.Fatal("poll error is nil")
 	}
 	if got := err.Error(); got != "internal: github issues request failed with 401 Unauthorized: bad credentials" {
+		t.Fatalf("poll error = %q", got)
+	}
+}
+
+func TestProviderPollRedactsTokenFromGitHubStatus(t *testing.T) {
+	t.Setenv("BACH_TEST_GITHUB_TOKEN", "secret-token")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "reflected secret-token", http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	provider := New(server.Client())
+	_, err := provider.Handshake(context.Background(), triggerprotocol.HandshakeParams{
+		Protocol: triggerprotocol.ProtocolVersion,
+		Config: map[string]string{
+			"repo":      "acme/widgets",
+			"api_url":   server.URL,
+			"token_env": "BACH_TEST_GITHUB_TOKEN",
+		},
+	})
+	if err != nil {
+		t.Fatalf("handshake error = %v", err)
+	}
+	_, err = provider.Poll(context.Background(), triggerprotocol.PollParams{})
+	if err == nil {
+		t.Fatal("poll error is nil")
+	}
+	if got := err.Error(); got != "internal: github issues request failed with 401 Unauthorized: reflected [REDACTED]" {
 		t.Fatalf("poll error = %q", got)
 	}
 }

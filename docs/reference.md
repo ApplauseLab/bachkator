@@ -1904,7 +1904,7 @@ Provider trigger fields:
 The `bach-github-issue-trigger` provider reads GitHub Issues through the trigger provider protocol. It accepts these `config` keys:
 
 - `repo`: required GitHub repository in `owner/name` form.
-- `token_env`: optional environment variable name containing a GitHub token; defaults to `GITHUB_TOKEN`. The token value must stay out of the Bachfile.
+- `token_env`: optional environment variable name containing a GitHub token; defaults to `GITHUB_TOKEN` when the provider process receives that variable. `bach factory start` only forwards the variable named by `token_env`, so set `token_env = "GITHUB_TOKEN"` when the daemon should use GitHub token auth. The token value must stay out of the Bachfile.
 - `api_url`: optional GitHub API base URL; defaults to `https://api.github.com`.
 - `labels`: optional comma-separated GitHub label filter passed to the Issues API.
 - `state`: optional issue state, one of `open`, `closed`, or `all`; defaults to `open`.
@@ -1913,7 +1913,7 @@ The `bach-github-issue-trigger` provider reads GitHub Issues through the trigger
 - `max_pages`: optional positive page limit per poll; defaults to `5`.
 - `priority_label_prefix`: optional label prefix for Work Item priority extraction; defaults to `priority:`.
 
-GitHub Issue labels are preserved as Work Item labels for route matching. Pull requests returned by the GitHub Issues API are ignored. The provider advances its cursor from GitHub `updated_at` timestamps and treats `priority:critical`, `priority:urgent`, `priority:high`, `priority:normal`, and `priority:low` labels as Bach priorities.
+GitHub Issue labels are preserved as Work Item labels for route matching. Pull requests returned by the GitHub Issues API are ignored. The provider advances its cursor from GitHub `updated_at` timestamps, suppresses issues at or before the stored cursor to avoid duplicate delivery, and treats `priority:critical`, `priority:urgent`, `priority:high`, `priority:normal`, and `priority:low` labels as Bach priorities.
 
 Validation rules:
 
@@ -1988,6 +1988,8 @@ evidence stores the Plan path and hash; if the Plan file changes after approval 
 resumes, the Work Item fails with a stale-approval message instead of silently implementing different text.
 
 When a Factory declares provider triggers, `bach factory start` also starts a long-running JSON-RPC session with each provider process. The daemon polls each provider on its configured interval, routes returned items to workflows using labels, and enqueues or updates pending Work Items. If any item in a polled batch fails intake validation, the entire batch is nacked so the provider can redeliver; successfully processed batches are acked and the trigger cursor is advanced. Provider trigger protocol messages conform to `docs/schemas/trigger-provider-v1.schema.json`. Provider intake failures do not fail Work Items that are already queued or active.
+
+Provider subprocesses receive only `PATH`, temp directory variables, and the environment variable named by `config.token_env` when present. Configure token env names explicitly instead of relying on the daemon to pass through the full shell environment.
 
 Use `--json` with any Factory command for machine-readable output. `factory submit` returns
 `{"item": <work-item>, "created": true|false}`. `factory list` returns `{"items": [<work-item>, ...]}`.

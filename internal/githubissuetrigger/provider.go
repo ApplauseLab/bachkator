@@ -164,11 +164,15 @@ func (p *Provider) fetchIssues(
 			return nil, "", err
 		}
 		for _, issue := range batch {
-			issues = append(issues, issue)
 			if issue.UpdatedAt.IsZero() {
+				issues = append(issues, issue)
 				continue
 			}
 			updated := issue.UpdatedAt.UTC().Format(time.RFC3339Nano)
+			if cursor != "" && compareTimes(updated, cursor) <= 0 {
+				continue
+			}
+			issues = append(issues, issue)
 			if nextCursor == "" || compareTimes(updated, nextCursor) > 0 {
 				nextCursor = updated
 			}
@@ -197,7 +201,8 @@ func (p *Provider) fetchIssuePage(
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", ProviderName)
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	if token := strings.TrimSpace(os.Getenv(cfg.TokenEnv)); token != "" {
+	token := strings.TrimSpace(os.Getenv(cfg.TokenEnv))
+	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	resp, err := p.client.Do(req)
@@ -209,10 +214,14 @@ func (p *Provider) fetchIssuePage(
 	}()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBodyBytes))
+		message := strings.TrimSpace(string(body))
+		if token != "" {
+			message = strings.ReplaceAll(message, token, "[REDACTED]")
+		}
 		return nil, fmt.Errorf(
 			"github issues request failed with %s: %s",
 			resp.Status,
-			strings.TrimSpace(string(body)),
+			message,
 		)
 	}
 	var issues []githubIssue

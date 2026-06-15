@@ -235,7 +235,7 @@ func (p *triggerPoller) ensureSession(ctx context.Context) error {
 	cmdCtx, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(cmdCtx, command[0], command[1:]...)
 	cmd.Dir = p.service.ConfigProject.Root
-	cmd.Env = triggerEnvironment()
+	cmd.Env = triggerEnvironment(p.trigger.Config)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		cancel()
@@ -334,9 +334,18 @@ func resolveTriggerCommand(command []string) ([]string, error) {
 	return resolved, nil
 }
 
-func triggerEnvironment() []string {
+func triggerEnvironment(config map[string]string) []string {
 	env := []string{}
-	for _, key := range []string{"PATH", "TMPDIR", "TEMP", "TMP"} {
+	seen := map[string]struct{}{}
+	keys := []string{"PATH", "TMPDIR", "TEMP", "TMP"}
+	if config != nil && config["token_env"] != "" {
+		keys = append(keys, config["token_env"])
+	}
+	for _, key := range keys {
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
 		if value, ok := os.LookupEnv(key); ok {
 			env = append(env, key+"="+value)
 		}
