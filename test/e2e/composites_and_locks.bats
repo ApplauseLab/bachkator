@@ -43,7 +43,7 @@ HCL
   assert_success
   assert_output_contains "[group/ci] group: shell/lint, shell/test"
   assert_output_contains "[pipeline/deploy] pipeline: group/ci -> shell/render -> shell/apply"
-  [[ "$(<"$E2E_PROJECT/order.txt")" = $'render\napply\n' ]]
+  [[ "$(<"$E2E_PROJECT/order.txt")" = $'render\napply' ]]
   assert_file_contains "$E2E_PROJECT/group.txt" "lint"
   assert_file_contains "$E2E_PROJECT/group.txt" "test"
 }
