@@ -1,0 +1,82 @@
+project "todoapp-opencode" {
+  root  = "."
+}
+
+provider "opencode" {
+  type    = "agent"
+  command = ["sh", "scripts/opencode-provider.sh"]
+}
+
+prompt "implementer" { path = "prompts/implementer.md" }
+prompt "architecture" { path = "prompts/architecture-review.md" }
+prompt "docs" { path = "prompts/docs-sweeper.md" }
+prompt "security" { path = "prompts/security-review.md" }
+prompt "merge" { path = "prompts/merge.md" }
+
+shell "test" {
+  shell   = "./scripts/run-bats.sh"
+  inputs  = ["todo.sh", "test/todo.bats", "scripts/run-bats.sh"]
+  outputs = [".bach/artifacts/todo-bats.passed"]
+}
+
+agent "architecture" {
+  mode     = "review"
+  provider = provider.opencode
+  role     = "architecture-reviewer"
+  prompt   = prompt.architecture
+}
+
+agent "docs" {
+  mode     = "review"
+  provider = provider.opencode
+  role     = "docs-sweeper"
+  prompt   = prompt.docs
+}
+
+agent "security" {
+  mode     = "review"
+  provider = provider.opencode
+  role     = "security-reviewer"
+  prompt   = prompt.security
+}
+
+policy "acceptance" {
+  reviewers        = [agent.architecture, agent.docs, agent.security]
+  required_targets = [shell.test]
+
+  quality_gate {
+    metric = "findings.error.open.count"
+    max    = 0
+  }
+}
+
+agent "build-todoapp" {
+  mode     = "implement"
+  provider = provider.opencode
+  role     = "implementer"
+  prompt   = prompt.implementer
+  plan     = "plans/todoapp.md"
+  policy   = policy.acceptance
+
+  workspace {
+    mode = "clone"
+    path = ".bach/agents/build-todoapp"
+  }
+
+  git {
+    branch = "bach/agents/todoapp"
+    commit = "required"
+  }
+
+  improve {
+    max_attempts = 2
+    until        = "policy.passed"
+  }
+}
+
+agent "merge-todoapp" {
+  mode     = "merge"
+  provider = provider.opencode
+  prompt   = prompt.merge
+  subject  = agent.build-todoapp
+}
