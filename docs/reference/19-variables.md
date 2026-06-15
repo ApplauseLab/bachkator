@@ -32,7 +32,7 @@ Computed functions:
 
 Value precedence:
 
-- `-var release_version=v0.1.0`
+- `--var release_version=v0.1.0`
 - `BACH_VAR_release_version=v0.1.0`
 - `BACH_VAR_RELEASE_VERSION=v0.1.0`
 - `default` in the `var` block

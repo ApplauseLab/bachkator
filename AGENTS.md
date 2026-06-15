@@ -75,7 +75,7 @@ go run ./cmd/bach reference plugins
 When a run fails, inspect Bach run history and logs:
 
 ```sh
-go run ./cmd/bach runs
+go run ./cmd/bach runs list
 ```
 
 Logs are under:
@@ -157,7 +157,7 @@ If conflicts occur, preserve all existing target fields and runner behavior unle
 - `internal/config/config_types.go`: keep metadata fields, profiles, `quiet`, `lock`, `steps`, env blocks, and image fields together.
 - `internal/runner/runner.go`, `executor.go`, `scheduler.go`, and `logs.go`: preserve pipeline execution, profile/env layering, quiet/log-only streaming, target labels, and lock manager plumbing.
 - `internal/cli/flags.go`: avoid duplicate option fields or duplicate flag bindings when phases add CLI flags.
-- `docs/reference.md` and `docs/agents.md`: merge documentation sections rather than choosing one side.
+- `docs/reference.md` and `docs/agent-guide.md`: merge documentation sections rather than choosing one side.
 
 Avoid shell-local variables like `$out` inside Bach `shell` strings because Bach expands `$NAME` before `/bin/sh` runs. Prefer command pipelines that do not depend on shell-local variable expansion, or move complex logic into a checked-in script/Go test.
 
@@ -215,7 +215,7 @@ Avoid shell-local variables like `$out` inside Bach `shell` strings because Bach
 
 ## Formatting & Tooling
 - Use standard Go import organization.
-- Ensure code passes `bach lint` and configured linters.
+- Ensure code passes `bach run shell/lint` and configured linters.
 - Do not introduce non-standard style conventions without strong justification.
 
 ## Concurrency

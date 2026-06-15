@@ -38,7 +38,7 @@ while [ "$(find "$event_dir" -name 'start-*' | wc -l | tr -d ' ')" -lt 3 ]; do
 done
 finding=""
 if [ "$BACH_AGENT_ROLE" = "docs-sweeper" ] && [ -f docs_missing ]; then
-  finding=',"findings":[{"Kind":"docs","Severity":"error","Rule":"docs-missing","Message":"docs were not updated for user-visible change","File":"docs/agents.md","Line":1}]'
+  finding=',"findings":[{"Kind":"docs","Severity":"error","Rule":"docs-missing","Message":"docs were not updated for user-visible change","File":"docs/agent-guide.md","Line":1}]'
 fi
 if [ "$BACH_AGENT_ROLE" = "security-reviewer" ] && [ -f security_risk ]; then
   finding=',"findings":[{"Kind":"security","Severity":"error","Rule":"unsafe-shell","Message":"unsafe shell command construction","File":"scripts/deploy.sh","Line":7}]'

@@ -138,7 +138,7 @@ func sections() ([]Section, error) {
 		if err != nil {
 			return err
 		}
-		if entry.IsDir() || !strings.HasSuffix(path, ".md") {
+		if entry.IsDir() || !strings.HasSuffix(path, ".md") || path == "AGENTS.md" {
 			return nil
 		}
 		files = append(files, path)

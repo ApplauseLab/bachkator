@@ -25,14 +25,14 @@ func TestHeadingsIncludesReferenceSections(t *testing.T) {
 
 func TestFormatHeadingsGroupsByDocument(t *testing.T) {
 	formatted := FormatHeadings([]Heading{
-		{File: "agents.md", Level: 1, Title: "Agent Guide"},
-		{File: "agents.md", Level: 2, Title: "First Move"},
+		{File: "agent-guide.md", Level: 1, Title: "Agent Guide"},
+		{File: "agent-guide.md", Level: 2, Title: "First Move"},
 		{File: "reference.md", Level: 1, Title: "Bach Reference"},
 	})
 	if strings.Contains(formatted, "First Move (agents.md)") {
 		t.Fatalf("formatted headings should not repeat filenames per heading: %q", formatted)
 	}
-	if !strings.Contains(formatted, "agents.md\n  agent-guide\n    first-move") {
+	if !strings.Contains(formatted, "agent-guide.md\n  agent-guide\n    first-move") {
 		t.Fatalf("formatted headings not grouped by document: %q", formatted)
 	}
 }

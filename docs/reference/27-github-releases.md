@@ -34,7 +34,7 @@ shell "github-release" {
 Run it with:
 
 ```sh
-bach -var release_version=v0.1.0 shell/github-release
+bach --var release_version=v0.1.0 run shell/github-release
 ```
 
 `gh release create <tag>` creates the Git tag when it does not exist. `--target "$BACH_GIT_COMMIT"` pins the tag to the current commit.

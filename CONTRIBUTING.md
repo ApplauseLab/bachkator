@@ -30,7 +30,7 @@ go run ./cmd/bach run shell/test
 If a run fails, inspect the recorded run history and logs:
 
 ```sh
-go run ./cmd/bach runs
+go run ./cmd/bach runs list
 ```
 
 Logs live under `.bach/runs/<run-id>/`.

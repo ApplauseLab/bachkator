@@ -22,4 +22,4 @@ Fields:
 - `destructive`: set to `true` when the target can delete, overwrite, or irreversibly change state.
 - `requires_confirmation`: set to `true` when operators should confirm intent before running.
 
-Risk metadata is inherited through `depends_on` and pipeline `steps`, so aggregate targets show and enforce the risk of the targets they run. Dry-runs are always allowed. Real execution of a target whose effective risk includes `requires_confirmation` must use `-yes`.
+Risk metadata is inherited through `depends_on` and pipeline `steps`, so aggregate targets show and enforce the risk of the targets they run. Dry-runs are always allowed. Real execution of a target whose effective risk includes `requires_confirmation` must use `--yes`.

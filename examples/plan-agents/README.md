@@ -118,7 +118,7 @@ pipeline/extension-merge-lane
   shell/merge-agent-8
 ```
 
-`shell/feature-swarm-all` is intentionally different from the delivery program. It runs every feature agent concurrently subject to `-jobs`, but it does not start any merge agent.
+`shell/feature-swarm-all` is intentionally different from the delivery program. It runs every feature agent concurrently subject to `--jobs`, but it does not start any merge agent.
 
 ## Expected Dry-Run Output
 
@@ -179,7 +179,7 @@ Dry-run it first:
 go run ./cmd/bach --file examples/plan-agents/Bachfile run --dry-run shell/long-running-agent-loop
 ```
 
-Real execution requires `-yes`, a clean worktree preflight, and an authenticated `opencode` binary:
+Real execution requires `--yes`, a clean worktree preflight, and an authenticated `opencode` binary:
 
 ```sh
 go run ./cmd/bach --file examples/plan-agents/Bachfile run --yes shell/long-running-agent-loop

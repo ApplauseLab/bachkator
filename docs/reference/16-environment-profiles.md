@@ -18,10 +18,10 @@ profile "staging-kristiyan" {
 }
 ```
 
-Select profiles with `-profile`. The flag may be repeated, and later profiles override earlier profile values:
+Select profiles with `--profile`. The flag may be repeated, and later profiles override earlier profile values:
 
 ```sh
-bach -profile staging -profile staging-kristiyan shell/render
+bach --profile staging --profile staging-kristiyan run shell/render
 ```
 
 Selected profile values overlay after top-level `env` and before target `env`. Unknown selected profiles are errors. Selected profile names and resolved profile values are included in target fingerprints.

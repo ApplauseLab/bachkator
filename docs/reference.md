@@ -313,17 +313,17 @@ Fields:
 - `destructive`: set to `true` when the target can delete, overwrite, or irreversibly change state.
 - `requires_confirmation`: set to `true` when operators should confirm intent before running.
 
-Risk metadata is inherited through `depends_on` and pipeline `steps`, so aggregate targets show and enforce the risk of the targets they run. Dry-runs are always allowed. Real execution of a target whose effective risk includes `requires_confirmation` must use `-yes`.
+Risk metadata is inherited through `depends_on` and pipeline `steps`, so aggregate targets show and enforce the risk of the targets they run. Dry-runs are always allowed. Real execution of a target whose effective risk includes `requires_confirmation` must use `--yes`.
 
 ## Environment Files
 
-Bachkator loads `.env` from the project root into target operation environments when the file exists. Use `-env-file .env.local` to overlay another file on top of `.env`.
+Bachkator loads `.env` from the project root into target operation environments when the file exists. Use `--env-file .env.local` to overlay another file on top of `.env`.
 
 Environment precedence for operations is:
 
 - parent process environment.
 - project `.env` values.
-- `-env-file` values.
+- `--env-file` values.
 - top-level Bachfile `env` values.
 - selected `profile` env values, in CLI order.
 - Bachkator runtime values such as `BACH_GIT_COMMIT`.
@@ -374,10 +374,10 @@ profile "staging-kristiyan" {
 }
 ```
 
-Select profiles with `-profile`. The flag may be repeated, and later profiles override earlier profile values:
+Select profiles with `--profile`. The flag may be repeated, and later profiles override earlier profile values:
 
 ```sh
-bach -profile staging -profile staging-kristiyan shell/render
+bach --profile staging --profile staging-kristiyan run shell/render
 ```
 
 Selected profile values overlay after top-level `env` and before target `env`. Unknown selected profiles are errors. Selected profile names and resolved profile values are included in target fingerprints.
@@ -587,7 +587,7 @@ Computed functions:
 
 Value precedence:
 
-- `-var release_version=v0.1.0`
+- `--var release_version=v0.1.0`
 - `BACH_VAR_release_version=v0.1.0`
 - `BACH_VAR_RELEASE_VERSION=v0.1.0`
 - `default` in the `var` block
@@ -720,7 +720,7 @@ Fields:
 - `cost`: expected cost. Valid values are `low`, `medium`, or `high`.
 - `remote`: set to `true` when the target talks to external services.
 - `destructive`: set to `true` when the target can delete, overwrite, or irreversibly change state.
-- `requires_confirmation`: set to `true` when operators should confirm intent before running. Real execution then requires `-yes`; dry-run is still allowed.
+- `requires_confirmation`: set to `true` when operators should confirm intent before running. Real execution then requires `--yes`; dry-run is still allowed.
 - `depends_on`: explicit target dependencies.
 - `lock`: optional in-run named lock. Ready targets with the same lock do not run concurrently in one Bachkator invocation.
 - `timeout`: optional Go-style duration such as `30s`, `5m`, or `1h`. The timeout bounds target operation execution and completion-contract checks.
@@ -729,7 +729,7 @@ Fields:
 - `shell`: shell string executed via `/bin/sh -c`.
 - `tools`: required host tools checked before execution. Each entry has `name` plus optional `command`, `version`, and `fix` fields. `command` is an exact probe command; Bachkator does not parse versions yet.
 - `preflights`: credential or session probes checked after required tools and before target execution. Each entry has `command` plus `name` or `kind`, and optional `fix`. Bachkator treats these as generic host checks and does not hardcode provider-specific auth behavior.
-- `quiet`: when `true`, write this target's progress and operation output only to `.bach/runs/.../*.log` unless `-verbose` is set.
+- `quiet`: when `true`, write this target's progress and operation output only to `.bach/runs/.../*.log` unless `--verbose` is set.
 - `workdir`: working directory relative to project root.
 - `env { ... }`: sorted target environment block. Values can reference top-level env entries, earlier resolvable target env entries, process env, and `var.name`. Commands reference target env at runtime with `$NAME` or `${NAME}`.
 - `inputs`: file paths, input references, plugin input references, or resources.
@@ -879,9 +879,9 @@ Fields:
 - `steps`: existing target names to run in order.
 - `timeout`: optional Go-style duration that bounds the whole pipeline invocation, including all steps.
 
-`bach -dry-run pipeline/deploy-staging` prints the pipeline and then each step in execution order. `bach pipeline/deploy-staging` stops at the first failed step, so later steps do not run. Step targets remain runnable directly for debugging.
+`bach run --dry-run pipeline/deploy-staging` prints the pipeline and then each step in execution order. `bach run pipeline/deploy-staging` stops at the first failed step, so later steps do not run. Step targets remain runnable directly for debugging.
 
-Pipeline targets inherit risk metadata from their steps. If any step has `requires_confirmation = true`, running the pipeline requires `-yes`; `-dry-run` still works without confirmation.
+Pipeline targets inherit risk metadata from their steps. If any step has `requires_confirmation = true`, running the pipeline requires `--yes`; `--dry-run` still works without confirmation.
 
 Pipeline retry is not enabled by default; use retry on individual shell steps that are safe to repeat.
 
@@ -967,7 +967,7 @@ shell "github-release" {
 Run it with:
 
 ```sh
-bach -var release_version=v0.1.0 shell/github-release
+bach --var release_version=v0.1.0 run shell/github-release
 ```
 
 `gh release create <tag>` creates the Git tag when it does not exist. `--target "$BACH_GIT_COMMIT"` pins the tag to the current commit.
@@ -1679,7 +1679,7 @@ Agent Template blocks:
 - Runnable Agent Targets must be concrete. `bach validate` rejects an agent that still has unresolved template placeholders after inheritance.
 
 Provider processes are untrusted with respect to Bach-owned policy evidence. During provider execution,
-Bach fails the attempt if `.bach/artifacts/policies`, target cache state, policy-target run state, or Factory approval records change outside Bach's own writes.
+Bach fails the attempt if `.bach/artifacts/policies`, target cache state, policy-target run state, Plan ledger/evidence rows, or Factory approval records change outside Bach's own writes.
 Implementer and reviewer providers require the main checkout to be clean before invocation and fail if
 the provider changes main checkout HEAD, branch, Git metadata, ignored files, or non-`.bach` status.
 

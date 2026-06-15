@@ -44,7 +44,7 @@ Fields:
 - `cost`: expected cost. Valid values are `low`, `medium`, or `high`.
 - `remote`: set to `true` when the target talks to external services.
 - `destructive`: set to `true` when the target can delete, overwrite, or irreversibly change state.
-- `requires_confirmation`: set to `true` when operators should confirm intent before running. Real execution then requires `-yes`; dry-run is still allowed.
+- `requires_confirmation`: set to `true` when operators should confirm intent before running. Real execution then requires `--yes`; dry-run is still allowed.
 - `depends_on`: explicit target dependencies.
 - `lock`: optional in-run named lock. Ready targets with the same lock do not run concurrently in one Bachkator invocation.
 - `timeout`: optional Go-style duration such as `30s`, `5m`, or `1h`. The timeout bounds target operation execution and completion-contract checks.
@@ -53,7 +53,7 @@ Fields:
 - `shell`: shell string executed via `/bin/sh -c`.
 - `tools`: required host tools checked before execution. Each entry has `name` plus optional `command`, `version`, and `fix` fields. `command` is an exact probe command; Bachkator does not parse versions yet.
 - `preflights`: credential or session probes checked after required tools and before target execution. Each entry has `command` plus `name` or `kind`, and optional `fix`. Bachkator treats these as generic host checks and does not hardcode provider-specific auth behavior.
-- `quiet`: when `true`, write this target's progress and operation output only to `.bach/runs/.../*.log` unless `-verbose` is set.
+- `quiet`: when `true`, write this target's progress and operation output only to `.bach/runs/.../*.log` unless `--verbose` is set.
 - `workdir`: working directory relative to project root.
 - `env { ... }`: sorted target environment block. Values can reference top-level env entries, earlier resolvable target env entries, process env, and `var.name`. Commands reference target env at runtime with `$NAME` or `${NAME}`.
 - `inputs`: file paths, input references, plugin input references, or resources.

@@ -186,7 +186,7 @@ Bachkator works with any agent because it is just a CLI plus files in your repo.
 | Cross-agent portability | Claude Code feature model | Works from Claude Code, OpenCode, Codex, Cursor, CI, and humans |
 | Run evidence | Workflow progress/results live in Claude's workflow UI/session | Durable logs and State Store under `.bach/` |
 | Cache and affected checks | Workflow script decides what to re-run | Inputs, Outputs, Resources, fingerprints, and `bach affected` |
-| Risk controls | Claude permissions and workflow approval | Target metadata plus `requires_confirmation` / `-yes` |
+| Risk controls | Claude permissions and workflow approval | Target metadata plus `requires_confirmation` / `--yes` |
 | Quality gates | Workflow can ask agents to review or run tools | Parsed reports, metrics, findings, and gates via `bach quality` |
 | Long-running loops | Great for background Claude subagent fan-out | Great as the stable loop contract, checkpoint target, and gate runner |
 
@@ -204,7 +204,7 @@ Agents should not guess. They should:
 6. `bach run --log-only --force group/gate` before handing off or committing so quality reports and gates execute instead of relying on cached status
 7. `bach runs list` and `.bach/runs/.../*.log` when something fails
 
-See the [Agent Guide](docs/agents.md) for the full workflow.
+See the [Agent Guide](docs/agent-guide.md) for the full workflow.
 
 ## 🧪 Quality gates as first-class Targets
 
@@ -262,7 +262,7 @@ bach quality gates
 ## 📚 Docs
 
 - 📖 [Reference](docs/reference.md): CLI flags, Bachfile syntax, Targets, Agent Targets, Inputs, Resources, quality reports, plugins, Backend configuration, logs, and Git environment.
-- 🤖 [Agent Guide](docs/agents.md): how agents discover, dry-run, execute, and inspect project operations.
+- 🤖 [Agent Guide](docs/agent-guide.md): how agents discover, dry-run, execute, and inspect project operations.
 - 🧭 [Product Context](CONTEXT.md): domain language and architecture direction.
 - 🤝 [Contributing](CONTRIBUTING.md): development workflow, docs rules, and release checklist.
 - ⚖️ [License](LICENSE): MIT License, copyright 2026 ApplauseLab.

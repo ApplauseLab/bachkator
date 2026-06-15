@@ -38,8 +38,8 @@ Fields:
 - `steps`: existing target names to run in order.
 - `timeout`: optional Go-style duration that bounds the whole pipeline invocation, including all steps.
 
-`bach -dry-run pipeline/deploy-staging` prints the pipeline and then each step in execution order. `bach pipeline/deploy-staging` stops at the first failed step, so later steps do not run. Step targets remain runnable directly for debugging.
+`bach run --dry-run pipeline/deploy-staging` prints the pipeline and then each step in execution order. `bach run pipeline/deploy-staging` stops at the first failed step, so later steps do not run. Step targets remain runnable directly for debugging.
 
-Pipeline targets inherit risk metadata from their steps. If any step has `requires_confirmation = true`, running the pipeline requires `-yes`; `-dry-run` still works without confirmation.
+Pipeline targets inherit risk metadata from their steps. If any step has `requires_confirmation = true`, running the pipeline requires `--yes`; `--dry-run` still works without confirmation.
 
 Pipeline retry is not enabled by default; use retry on individual shell steps that are safe to repeat.
