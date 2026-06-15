@@ -2,7 +2,7 @@
 
 Status: in progress
 
-See `docs/designs/dark-software-factory-master-plan.md` for the broader Factory, Backend, trigger-provider, and Atelier integration roadmap that builds on this plan-first foundation.
+This design note covers the plan-first foundation for Factory, Backend, trigger-provider, and managed-control-plane work.
 
 Accepted direction: `docs/adr/0020-plan-execution-unit-and-backend-evidence.md` locks one accepted Plan as one implementer unit and stores Bach-owned Plan ledger/evidence records in the Backend database.
 

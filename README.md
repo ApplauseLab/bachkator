@@ -3,32 +3,35 @@
 <div align="center">
   <img src="./assets/bachkator.png" alt="Bachkator logo" width="260" />
 
-  <p><strong>Terraform for your builds and agent loops.</strong></p>
-  <p><strong>Бачкатор</strong> is Bulgarian slang for a hard worker: the one who gets the job done.</p>
+  <p><strong>Lights-off automation. Lights-on evidence.</strong></p>
+  <p>The local-first dark factory and build system for agent-era repositories.</p>
+  <p><strong>Бачкатор</strong> is Bulgarian slang for a hard worker: the one who gets the job done, even when nobody is watching.</p>
 </div>
 
-Bachkator is a build-system control plane for repositories where humans and coding agents need the same explicit, inspectable project operations.
+Bachkator turns a checked-in `Bachfile` into a repository's executable contract. Humans, CI, and coding agents use the same named Targets, dry-run plans, cache fingerprints, quality gates, logs, policy evidence, Plan ledgers, and Factory queues.
 
-Instead of asking every agent to rediscover commands from README fragments, CI YAML, package scripts, shell history, and vibes, you declare a **Bachfile**. Bachkator turns that Bachfile into a Dependency Graph with dry-runs, cache evidence, logs, risk metadata, quality gates, and embedded reference docs.
+Use it as a **build system** when you need explicit, inspectable project operations. Use it as a **dark factory** when work should move through intake, planning, implementation, policy evaluation, merge, deploy, and verification without relying on a human or agent to rediscover the process from README fragments, CI YAML, package scripts, shell history, and vibes.
+
+> **Dark factory** means lights off for the busywork, lights on for the evidence: unattended delivery queues where every phase is declared, gated, logged, and inspectable.
 
 ## ✨ Why Bachkator?
 
 Modern agents can move fast. They also waste tokens, run the wrong command, skip preflight checks, lose logs, and accidentally treat deploy flows like parallel test jobs.
 
-Bachkator gives them an operational contract:
+Bachkator gives humans, CI, and agents one operational contract:
 
-- 🧭 **Discover** supported Targets with `bach list`.
-- 🔎 **Explain** a Target before running it with `bach explain <target>`.
-- 🧪 **Dry-run** the Run Plan with `bach run --dry-run <target>`.
-- 🎯 **Suggest affected Targets** from changed files with `bach affected`.
-- ⚡ **Skip fresh work** with input/output/dependency fingerprints.
-- 🧵 **Run safely in parallel** while preserving ordered Pipeline Targets.
-- 🧰 **Check required tools and preflights** before execution.
-- 🚦 **Mark risk** with remote, destructive, and confirmation-required metadata.
-- 📊 **Parse quality reports** and enforce quality gates through `bach quality`.
-- 🔌 **Parse project-specific quality reports** with typed quality plugins.
-- 🧾 **Keep durable logs** under `.bach/runs/<run-id>/`.
-- 📚 **Ship docs in the binary** with `bach reference`.
+- 🏭 **Run a dark factory** with durable Work Items, daemon leases, provider triggers, phase approvals, and plan-first delivery workflows.
+- 📝 **Plan before implementation** with Markdown Plans, Plan hashes, dependency status, batch execution, and immutable Backend ledgers.
+- 🤖 **Execute agent work safely** through Agent Targets, managed workspaces, generated prompts, required reports, reviewer policies, improvement loops, and merge evidence.
+- 🧭 **Discover repo operations** with `bach list`, target aliases, embedded reference docs, and `bach explain <target>`.
+- 🧪 **Dry-run before side effects** with `bach run --dry-run <target>` and machine-readable plan output.
+- 🎯 **Choose focused checks** with `bach affected` and file provenance lookups.
+- ⚡ **Skip fresh work** with input, output, environment, dependency, and operation fingerprints.
+- 🧵 **Run safely in parallel** while preserving ordered Pipeline Targets for release and deploy lanes.
+- 🚦 **Mark risk explicitly** with cost, remote, destructive, confirmation-required, tool, preflight, timeout, retry, and lock metadata.
+- 📊 **Turn reports into gates** with normalized metrics, findings, quality plugins, Rego policies, and `bach quality` queries.
+- 🧾 **Keep durable evidence** in Backend records, `.bach/runs/<run-id>/` logs, run artifacts, policy artifacts, and JSON exports.
+- 🔌 **Extend by contract** with typed executable plugins, Backend Providers, and Trigger Providers instead of private in-process hooks.
 
 ## 🚀 Quickstart
 
@@ -51,26 +54,37 @@ Or build from source:
 go run ./cmd/bach run shell/build
 ```
 
-Contributor setup:
+Then, inside a project with a `Bachfile`:
+
+```sh
+bach list
+bach explain shell/test
+bach run --dry-run shell/test
+bach run shell/test
+bach affected
+bach runs list
+bach reference
+```
+
+Contributor setup for this repository:
 
 ```sh
 go run ./cmd/bach run --dry-run shell/install-git-hooks
 go run ./cmd/bach run shell/install-git-hooks
 ```
 
-Commits in this repository use semantic subject lines such as
-`feat(cli): add dry-run output` or `docs: update agent workflow`.
+Commits in this repository use semantic subject lines such as `feat(cli): add dry-run output` or `docs: update agent workflow`.
 
-## 🧱 Bachfile in one screen
+## 🧱 Build graph in one screen
 
-Or run agentic loops: [examples/plan-agents](https://github.com/ApplauseLab/bachkator/tree/main/examples/plan-agents).
+A Bachfile declares project operations as typed Targets. Bachkator plans, fingerprints, runs, gates, records, and explains those Targets.
 
 ```hcl
 # vim: set ft=hcl :
 
 project "example" {
   root    = "."
-  default = "shell.test"
+  default = "group.gate"
 }
 
 input "file" "go_sources" {
@@ -78,54 +92,13 @@ input "file" "go_sources" {
 }
 
 shell "test" {
-  command = ["sh", "-c", "go test -coverprofile=$(RUN_DIRECTORY)/coverage.out ./..."]
+  command = ["go", "test", "./..."]
   inputs  = [input.file.go_sources]
-  outputs = {
-    coverage = "$(RUN_DIRECTORY)/coverage.out"
-  }
 }
 
 shell "lint" {
-  command = [
-    "golangci-lint",
-    "run",
-    "--issues-exit-code=0",
-    "--output.checkstyle.path=$(RUN_DIRECTORY)/checkstyle.xml",
-    "--output.text.path=stdout",
-  ]
-  tools = [{
-    name    = "golangci-lint"
-    command = ["sh", "-c", "golangci-lint version | grep -q 'version 2\\.'"]
-    version = "v2"
-  }]
-  inputs = [input.file.go_sources]
-  outputs = {
-    checkstyle = "$(RUN_DIRECTORY)/checkstyle.xml"
-  }
-}
-
-quality "test" {
-  cov {
-    format = "go-cover"
-    path   = shell.test.outputs.coverage
-  }
-
-  quality_gate {
-    metric = "coverage.line.percent"
-    min    = 50
-  }
-}
-
-quality "lint" {
-  lint {
-    format = "checkstyle-xml"
-    path   = shell.lint.outputs.checkstyle
-  }
-
-  quality_gate {
-    metric = "issues.total.count"
-    max    = 0
-  }
+  command = ["golangci-lint", "run"]
+  inputs  = [input.file.go_sources]
 }
 
 shell "build" {
@@ -135,95 +108,163 @@ shell "build" {
   outputs    = ["dist/app"]
 }
 
-pipeline "ci" {
-  steps = [shell.lint, shell.test, shell.build]
+group "gate" {
+  targets = [shell.lint, shell.test, shell.build]
 }
 ```
 
-Then, inside a project with a `Bachfile`:
+Run the graph through the same CLI contract an agent would use:
 
 ```sh
 bach list
-bach explain shell/test
-bach affected
-bach run --dry-run shell/lint
-bach run shell/lint
-bach run --dry-run shell/test
-bach run -j 8 shell/test
+bach explain group/gate
 bach run --dry-run group/gate
 bach run --log-only --force group/gate
-bach quality summary
-bach runs list
+bach provenance dist/app
+bach runs inspect <run-id>
 ```
+
+## 🏭 Dark factory in one screen
+
+A Factory is not a Target. It is a durable delivery queue and daemon policy layered on top of the same Bachfile contract.
+
+```text
+intake -> plan -> approval -> implement (+ policy evaluation) -> merge -> deploy -> verify
+```
+
+This Factory sketch assumes the referenced Agent Templates and Targets are declared elsewhere in the same Bachfile:
+
+```hcl
+factory "delivery" {
+  workflow "ship" {
+    plan {
+      agent_template    = agent_template.planner
+      path              = "plans/factory/${work_item.id}.md"
+      requires_approval = true
+    }
+
+    implement {
+      agent_template = agent_template.implementer
+    }
+
+    merge {
+      target = "pipeline.merge_ready"
+    }
+
+    deploy "staging" {
+      target = "shell.deploy_staging"
+    }
+
+    verify "staging" {
+      target = "group.staging_gate"
+    }
+
+    deploy "production" {
+      target            = "pipeline.deploy_production"
+      requires_approval = true
+    }
+
+    verify "production" {
+      target = "group.production_gate"
+    }
+  }
+
+  triggers {
+    manual {}
+
+    provider "github_issues" {
+      command       = ["bach-trigger-fixture"]
+      poll_interval = "5m"
+
+      route {
+        label    = "factory:ship"
+        workflow = "ship"
+      }
+    }
+  }
+}
+```
+
+Submit work, run the daemon, and approve gated phases:
+
+```sh
+bach factory submit delivery --workflow ship --title "Ship billing webhook" --body "Implement webhook and tests"
+bach factory list delivery
+bach factory start delivery --yes
+bach factory approve delivery <work-item-id> --phase plan
+bach factory approve delivery <work-item-id> --phase deploy.production --reason "change approved"
+bach factory inspect delivery <work-item-id>
+```
+
+The daemon claims one Work Item at a time and executes the workflow spine `plan -> implement -> merge -> deploy[*] -> verify[*]`. If a plan or deploy phase needs approval, Bachkator records the pause, releases the active claim, and resumes after approval without silently changing the approved Plan hash.
+
+## 🔌 Extensible by contract
+
+Bachkator is designed to grow without turning your repository into a pile of bespoke shell glue or requiring external systems to import Bach internals. Its extension points are executable contracts and versioned JSON schemas.
+
+- **Graph plugins** are typed executables in any language. They run while loading the Project and can contribute dependency/input evidence before validation, fingerprinting, scheduling, and `bach affected` matching.
+- **Quality plugins** are typed executables that parse project-specific report files into normalized metrics and findings after a target succeeds. Bachkator then owns quality gates, Rego policy evaluation, run evidence, and CLI inspection.
+- **Backend Providers** speak `bach.backend.v1` and advertise capabilities such as `runs`, `evidence_refs`, `quality_reports`, `findings`, `factory_queue`, `plan_ledger`, and `approvals`. The bundled SQLite provider is local-first; other providers can implement the same state and evidence protocol.
+- **Trigger Providers** speak `bach.trigger.v1` and feed normalized Work Items into Factory queues through handshake, poll, ack, and nack messages. GitHub Issues, Discord intake, ticket systems, scheduled maintenance, or private control planes can all become Factory intake without becoming Bach core.
+
+The key rule is that Bach owns the execution semantics and evidence boundary. Extensions provide graph evidence, parsed quality evidence, durable Backend capabilities, or normalized intake; Bachkator still validates the Bachfile, plans the Run, enforces gates, records evidence, and drives Factory phase transitions.
+
+Start with the contracts:
+
+- [Plugin reference](docs/reference/28-plugins.md)
+- [Backend Provider schema](docs/schemas/backend-provider-v1.schema.json)
+- [Trigger Provider schema](docs/schemas/trigger-provider-v1.schema.json)
 
 ## 🧠 The mental model
 
-Think Terraform, but for repository operations:
+Think Terraform, but for repository operations and unattended delivery:
 
 | Terraform | Bachkator |
 | --- | --- |
-| configuration declares infrastructure | `Bachfile` declares project operations |
-| plan before apply | dry-run before run |
-| state tracks what exists | State Store tracks runs, fingerprints, reports, gates |
-| providers expose capabilities | Targets, Inputs, Resources, Plugins, Quality Handlers |
-| apply changes intentionally | run named Targets intentionally |
+| configuration declares infrastructure | `Bachfile` declares project operations and factory lanes |
+| plan before apply | dry-run before run, Plan before implementation |
+| state tracks what exists | Backend tracks runs, fingerprints, reports, gates, Work Items, approvals, and Plan ledgers |
+| providers expose capabilities | Targets, Inputs, Resources, Plugins, Quality Handlers, Providers, and Trigger Providers |
+| apply changes intentionally | run named Targets and approve Factory phases intentionally |
+| policy and review guard changes | quality gates, Rego policies, reviewer agents, policy fan-out, and merge evidence guard delivery |
 
-Bachkator does not replace your language tooling. It wraps it in a shared CLI Contract so every human, CI job, and agent uses the same Targets.
+Bachkator does not replace your language tooling, CI, or coding agents. It wraps them in a shared CLI Contract so every human, CI job, agent, and Factory daemon uses the same executable truth.
 
 Inside this repository, that contract is mandatory for routine project work: use Bach targets instead of running tools such as `gofmt`, `go test`, `go build`, `golangci-lint`, Bats, docs generators, or release scripts directly. If a repeated operation is missing, add or update a Bach target first, then run that target.
 
-## 🧬 Claude dynamic workflows vs Bachkator
+## 🤖 Built for agent loops and unattended delivery
 
-Bachkator works with any agent because it is just a CLI plus files in your repo. Use it from Claude Code, OpenCode, Codex, Cursor, CI, a shell script, or a human terminal.
-
-[Claude Code dynamic workflows](https://code.claude.com/docs/en/workflows) are powerful: Claude writes a JavaScript script, the workflow runtime runs it in the background, and that script can orchestrate many subagents for audits, migrations, and cross-checked research. Bachkator complements that model by giving every workflow a durable repository contract to call.
-
-| Need | Claude dynamic workflows | Bachkator |
-| --- | --- | --- |
-| Multi-agent orchestration | Excellent for Claude-written scripts that fan out subagents | Provides stable Targets those agents can invoke |
-| Project operation contract | Saved workflows can live under `.claude/workflows/` | Explicit `Bachfile` checked into the repo |
-| Plan before side effects | Workflow launch shows planned phases for approval | Built in for every Target with `bach run --dry-run <target>` |
-| Cross-agent portability | Claude Code feature model | Works from Claude Code, OpenCode, Codex, Cursor, CI, and humans |
-| Run evidence | Workflow progress/results live in Claude's workflow UI/session | Durable logs and State Store under `.bach/` |
-| Cache and affected checks | Workflow script decides what to re-run | Inputs, Outputs, Resources, fingerprints, and `bach affected` |
-| Risk controls | Claude permissions and workflow approval | Target metadata plus `requires_confirmation` / `--yes` |
-| Quality gates | Workflow can ask agents to review or run tools | Parsed reports, metrics, findings, and gates via `bach quality` |
-| Long-running loops | Great for background Claude subagent fan-out | Great as the stable loop contract, checkpoint target, and gate runner |
-
-Use dynamic workflows for Claude-native reasoning, fan-out, and UI. Use Bachkator for the repository's executable truth.
-
-## 🤖 Built for agent loops
-
-Agents should not guess. They should:
+Agents and factory daemons should not guess. They should:
 
 1. `bach list`
 2. `bach explain <target>` when unfamiliar or risky
 3. `bach run --dry-run <target>` before expensive or side-effecting work
 4. `bach affected` after edits
 5. `bach run <target>` for the smallest useful gate
-6. `bach run --log-only --force group/gate` before handing off or committing so quality reports and gates execute instead of relying on cached status
-7. `bach runs list` and `.bach/runs/.../*.log` when something fails
+6. `bach run --log-only --force group/gate` before handoff or commit so quality reports and gates execute instead of relying on cached status
+7. `bach factory submit <factory>` when work should enter an unattended lane
+8. `bach factory approve <factory> <item> --phase <phase>` for gated plan or deploy phases
+9. `bach factory start <factory>` when a daemon should drain the queue
+10. `bach runs list`, `bach runs inspect <run-id>`, and `.bach/runs/.../*.log` when something fails
 
-See the [Agent Guide](docs/agent-guide.md) for the full workflow.
+See the [Agent Guide](docs/agent-guide.md) for target, Plan, and Factory operating guidance.
 
-## 🧪 Quality gates as first-class Targets
+## 🧾 Evidence and safety
 
-Bachkator lets Targets publish report files and lets `quality` blocks parse and gate them. This repo dogfoods that with:
+Bachkator is built for high-agency automation, but it treats side effects and external providers as evidence-bound operations.
 
-- `shell/test` → Go coverage profile → `coverage.line.percent` gate.
-- `shell/lint` → golangci-lint Checkstyle XML → `issues.total.count == 0` gate.
-- `shell/fmt` → `.golangci.yml` formatter stack with `gofmt` and `golines`.
-- `group/gate` → lint, unit tests, and e2e tests in one deduplicated graph.
-- `.golangci.yml` → `golines` at 100 columns plus `dupl` duplication checks.
-
-Because the linter exits zero, Bachkator owns the quality decision and records findings/gates in the State Store.
-
-```sh
-bach run shell/lint
-bach run --log-only --force group/gate
-bach quality findings
-bach quality gates
-```
+- Dry-runs are read-only and show the Run Plan before execution.
+- Target metadata carries operator guidance, cost, remote/destructive risk, and confirmation requirements.
+- Pipeline Targets preserve order when deploy or release sequence matters.
+- Locks coordinate shared local or remote resources within a run.
+- Required tools and preflights fail early with operator-facing fix guidance.
+- Cache fingerprints explain why work is fresh or stale.
+- Quality blocks parse report files into normalized metrics and findings, then enforce gates.
+- Rego policies evaluate normalized evidence with network and runtime-introspection builtins disabled.
+- Agent Targets run providers in managed workspaces and require structured reports, git evidence, and clean workspace boundaries.
+- Policy fan-out runs required targets and reviewer agents against the subject workspace before merge.
+- Factory approvals are durable, phase-scoped, and tied to Plan evidence where relevant.
+- Run exports intentionally link to local evidence paths instead of dumping every raw provider log into broad JSON output.
 
 ## 🧩 Examples
 
@@ -234,34 +275,29 @@ bach quality gates
 
 ## ✅ Supported today
 
-- HCL `Bachfile` configuration.
-- `project`, nested `backend`, `var`, `env`, `profile`, `input`, `resource`, `plugin`, `provider`, `prompt`, `alias`, `policy`, `shell`, `pipeline`, `image`, `agent`, and `quality` blocks.
-- Named file Inputs with glob and directory hashing.
-- Resources for logical dependency evidence without hashing large directories.
-- Shell, Image, Pipeline, Group, and implementation/review/merge Agent Targets with reviewer policies, improvement loops, merge evidence, and JSON export support.
-- Parallel scheduling with deterministic single-thread order.
-- Pipeline Targets for ordered deploy/release flows.
-- Incremental cache fingerprints backed by SQLite.
-- Per-Run and per-Target logs.
-- Git environment injection for reproducible builds and releases.
-- Computed variable defaults for Git SHAs, dirty suffixes, and file hashes.
-- Environment profiles and `.env` / `--env-file` overlays.
-- Target metadata for description, operator guidance, cost, risk, and confirmation guards.
-- Required tool and preflight checks.
-- Completion contracts with `success_when` and `fail_when`.
-- Embedded reference docs.
-- `bach explain` Target inspection.
-- `bach affected` suggestions from changed files and plugin-provided Inputs.
-- OCI image build command generation for Docker or Apple `container`.
-- Quality report parsing, normalized metrics/findings, and quality gates.
-- Subject-scoped policy fan-out with generated policy nodes and evaluation JSON.
-- Typed plugins, including graph-load plugins and quality parser plugins.
-- Agent provider prompt/context/report artifacts, clone workspaces, and required commit/report enforcement.
+- HCL `Bachfile` configuration with `project`, `backend`, `var`, `env`, `profile`, `input`, `resource`, `plugin`, `provider`, `prompt`, `agent_template`, `alias`, `policy`, `shell`, `group`, `pipeline`, `image`, `agent`, `quality`, and `factory` blocks.
+- Factory Work Items with manual and provider triggers, route rules, durable intake evidence, dedupe keys, lifecycle management, approvals, daemon leases, and machine-readable queue output.
+- Factory workflows with plan, implement, optional merge, named deploy, and named verify phases.
+- Markdown Plan status, implementation, review grouping, dependency waves, batch execution, Plan hashes, and Backend ledger records.
+- Shell, Image, Group, Pipeline, and implementation/review/merge Agent Targets.
+- Agent provider prompt/context/report artifacts, OpenCode provider evidence capture, clone workspaces, required commit/report enforcement, reviewer policies, improvement loops, applied-policy verdicts, and merge evidence.
+- Subject-scoped policy fan-out with generated policy nodes, required target execution, reviewer aggregation, quality gates, and evaluation JSON.
+- Named file Inputs, Resources, graph plugins, quality parser plugins, target aliases, target explanations, file provenance, and affected-target suggestions.
+- Backend Provider and Trigger Provider protocols for replacing durable state/evidence storage or feeding external intake into Factory queues without expanding Bach core.
+- Incremental cache fingerprints backed by the configured Backend Provider.
+- Per-Run and per-Target logs, run inspection, concise log slicing, and JSON exports for failures, quality evidence, agent reports, policy evidence, and merge evidence.
+- Environment profiles, `.env` and `--env-file` overlays, Git environment injection, computed variables, tool checks, preflights, completion contracts, retries, locks, timeouts, and target risk metadata.
+- OCI image build command generation for Docker-compatible builders or Apple `container`.
 - GitHub release Targets through `gh release create`.
+- Embedded reference docs through `bach reference`.
+
+Deferred Factory behavior includes retries, review queues, and replan loops.
 
 ## 📚 Docs
 
-- 📖 [Reference](docs/reference.md): CLI flags, Bachfile syntax, Targets, Agent Targets, Inputs, Resources, quality reports, plugins, Backend configuration, logs, and Git environment.
+- 📖 [Reference](docs/reference.md): CLI flags, Bachfile syntax, Targets, Agent Targets, Plans, Factory Work Items, Inputs, Resources, quality reports, plugins, Backend configuration, logs, and Git environment.
+- 🔌 [Plugin reference](docs/reference/28-plugins.md): graph and quality executable plugin contracts.
+- 🧬 [Backend Provider schema](docs/schemas/backend-provider-v1.schema.json) and [Trigger Provider schema](docs/schemas/trigger-provider-v1.schema.json): versioned integration contracts for durable evidence and Factory intake.
 - 🤖 [Agent Guide](docs/agent-guide.md): how agents discover, dry-run, execute, and inspect project operations.
 - 🧭 [Product Context](CONTEXT.md): domain language and architecture direction.
 - 🤝 [Contributing](CONTRIBUTING.md): development workflow, docs rules, and release checklist.
@@ -271,21 +307,23 @@ The binary embeds the reference docs:
 
 ```sh
 bach reference
-bach reference project
-bach reference shell-targets
+bach reference factory-work-items
+bach reference agent-targets
 bach reference quality-reports
+bach reference plans
 ```
 
 ## 🛡️ Safety notes
 
-- Dry-run before remote or destructive Targets.
+- Dry-run before remote, destructive, expensive, or unfamiliar Targets.
 - Use `requires_confirmation = true` for guarded operations; real execution then requires `--yes`.
 - Use Pipeline Targets when order matters; plain dependency graph edges may run in parallel.
 - Put generated reports under `$(RUN_DIRECTORY)` so every Run keeps its own evidence.
 - Model huge produced directories as Resources instead of hashing them as Outputs.
+- Treat provider output as untrusted unless Bachkator has captured it as structured evidence and passed the configured policy.
 
 ## 🏁 Name
 
-**Бачкатор** means the hard worker — the one who does the work, carries the team, and gets it done.
+**Бачкатор** means the hard worker: the one who does the work, carries the team, and gets it done.
 
-Bachkator is that worker for your repo: explicit Targets, inspectable Runs, durable evidence, fewer vibes.
+Bachkator is that worker for your repo: explicit Targets, unattended Factory lanes, inspectable Runs, durable evidence, fewer vibes.

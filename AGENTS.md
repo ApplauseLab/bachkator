@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Bachkator is a local-first build-system control plane for repositories where humans and coding agents need the same explicit, inspectable project operations. This root `AGENTS.md` is the project-wide DOX rail: it defines global workflow rules, repository-wide contracts, and the child context index that agents must follow before editing.
+Bachkator is a local-first dark factory and build-system control plane for repositories where humans and coding agents need the same explicit, inspectable project operations and unattended delivery lanes. This root `AGENTS.md` is the project-wide DOX rail: it defines global workflow rules, repository-wide contracts, and the child context index that agents must follow before editing.
 
 ## Core Contract
 

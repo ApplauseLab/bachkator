@@ -4,7 +4,7 @@ Factories declare durable queues for plan-first work. A Factory is not a Target 
 `bach list`.
 
 ```hcl
-factory "sldc" {
+factory "delivery" {
   workflow "ship" {
     plan {
       agent_template = agent_template.planner
@@ -16,40 +16,40 @@ factory "sldc" {
     }
 
     merge {
-      target = pipeline/merge_ready
+      target = "pipeline.merge_ready"
     }
 
     deploy "staging" {
-      target = shell/deploy_staging
+      target = "shell.deploy_staging"
     }
 
     verify "staging" {
-      target = shell/verify_staging
+      target = "shell.verify_staging"
     }
 
     deploy "production" {
-      target            = pipeline/deploy_production
+      target            = "pipeline.deploy_production"
       requires_approval = true
     }
 
     verify "production" {
-      target = group/production_gate
+      target = "group.production_gate"
     }
   }
 
   triggers {
     manual {}
 
-    provider "github" {
-      command = ["bach-trigger-fixture"]
+    provider "github_issues" {
+      command       = ["bach-trigger-fixture"]
       poll_interval = "5m"
       config = {
         items_path = ".bach/fixtures/trigger-items.json"
       }
 
       route {
-        label    = "urgent"
-        workflow = "hotfix"
+        label    = "factory:ship"
+        workflow = "ship"
       }
     }
   }
@@ -92,7 +92,7 @@ Validation rules:
 Submit a Work Item:
 
 ```sh
-bach factory submit sldc \
+bach factory submit delivery \
   --title "Ship billing webhook" \
   --body "Implement the webhook and tests." \
   --label billing \
@@ -111,12 +111,12 @@ existing item. JSON output reports `"created": false` for this case.
 Inspect and manage the queue:
 
 ```sh
-bach factory list sldc
-bach factory inspect sldc <work-item-id>
-bach factory cancel sldc <work-item-id> --reason "no longer needed"
-bach factory approve sldc <work-item-id> --phase plan
-bach factory approve sldc <work-item-id> --phase deploy.production --reason "change approved"
-bach factory status sldc
+bach factory list delivery
+bach factory inspect delivery <work-item-id>
+bach factory cancel delivery <work-item-id> --reason "no longer needed"
+bach factory approve delivery <work-item-id> --phase plan
+bach factory approve delivery <work-item-id> --phase deploy.production --reason "change approved"
+bach factory status delivery
 ```
 
 `bach factory approve` records durable approval evidence for a Work Item that is currently waiting at the
@@ -128,8 +128,8 @@ phase strings use dot form such as `deploy.production`. The Backend Provider DTO
 Start a long-running Factory daemon:
 
 ```sh
-bach factory start sldc --yes
-bach factory start sldc --yes --poll-interval 10s --renew-interval 1m --lease-ttl 2m
+bach factory start delivery --yes
+bach factory start delivery --yes --poll-interval 10s --renew-interval 1m --lease-ttl 2m
 ```
 
 The daemon acquires a Backend lease, polls for pending Work Items, claims one item at a time, and executes

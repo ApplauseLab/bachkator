@@ -52,6 +52,30 @@ bach logs <run-id> --failed --last 80
 - Prefer `bach reference` and `bach reference <topic>` before guessing Bachfile syntax.
 - Keep generated artifacts under declared target outputs or `.bach/`; do not commit `.bach/` or `dist/`.
 
+## Plan And Factory Workflow
+
+Use Plans when implementation should be ledgered before an agent starts work:
+
+```sh
+bach plan status plans/example.md
+bach plan implement --dry-run plans/example.md
+bach plan implement --yes plans/example.md
+bach plan review plans/example.md
+```
+
+Use Factories when work should enter an unattended delivery lane:
+
+```sh
+bach factory submit <factory> --title "Ship billing webhook" --body "Implement webhook and tests"
+bach factory list <factory>
+bach factory start <factory> --yes
+bach factory approve <factory> <work-item-id> --phase plan
+bach factory approve <factory> <work-item-id> --phase deploy.production
+bach factory inspect <factory> <work-item-id>
+```
+
+Factory daemons pause at gated `plan` or `deploy.<name>` phases until approval evidence exists. Inspect the Work Item and run history before approving a phase you did not personally watch complete.
+
 ## Commit Workflow
 
 This repository uses semantic commit messages. Install the tracked hook before committing:

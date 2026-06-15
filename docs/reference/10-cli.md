@@ -39,7 +39,7 @@ Supported flags:
 - `-v, --verbose`: with `list`, include cost and risk metadata; with `run`, stream quiet target output.
 - `--runs-limit <n>`: maximum runs or artifacts to list. Defaults to `10`; use `0` for all.
 - `--target <target>`: filter `runs list` or `artifacts` by target address.
-- `--status <status>`: filter `runs list` or `artifacts` by run status; with `factory list`, filter Work Items by lifecycle. Factory list defaults to `pending`; use `all` for every lifecycle.
+- `--status <status>`: filter `runs list` or `artifacts` by run status; with `factory list`, filter Work Items by lifecycle. Factory list defaults to `pending` and `waiting_approval`; use `all` for every lifecycle.
 - `--since <duration|time>`: filter `runs list` or `artifacts` by age or RFC3339 timestamp.
 - `--artifact <path>`: filter `runs list` or `artifacts` by artifact path substring.
 - `--failed`: with `logs`, show only failed target logs.

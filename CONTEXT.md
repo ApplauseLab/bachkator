@@ -1,6 +1,6 @@
 # Bachkator
 
-Bachkator is a build-system control plane for repositories where coding agents need explicit, inspectable project operations. This repository is documented as a single product context; configuration, execution, state, quality, and agent guidance share one language.
+Bachkator is a local-first dark factory and build-system control plane for repositories where coding agents need explicit, inspectable project operations and unattended delivery lanes. This repository is documented as a single product context; configuration, execution, state, quality, planning, factory, and agent guidance share one language.
 
 ## Language
 
@@ -184,7 +184,7 @@ _Avoid_: Bach cloud, public Go API, central State Store
 
 - A **Project** has exactly one **Bachfile**.
 - The **CLI Contract** is the public product boundary for Bachkator.
-- A **Bachfile** declares zero or more **Inputs**, **Resources**, and **Targets**.
+- A **Bachfile** declares zero or more **Inputs**, **Resources**, **Targets**, **Policies**, **Agent Templates**, and **Factories**.
 - A **Target** may depend on other **Targets**, forming the **Dependency Graph**.
 - A **Target** has one canonical **Target Address**.
 - A **Target** may consume **Inputs** or **Resources**.
@@ -193,6 +193,7 @@ _Avoid_: Bach cloud, public Go API, central State Store
 - A **Graph Plugin** may add **Inputs** and dependency/input patches before target validation, fingerprinting, scheduling, and affected-target matching.
 - A **Quality Plugin** may parse a target-produced report file into **Quality Report** metrics/findings during quality ingestion.
 - An **Agent Target** is still a **Target** and participates in planning, dependencies, run records, logs, quality reports, and quality gates.
+- A **Factory** is not a **Target**; it coordinates **Factory Work Items**, **Plans**, **Agent Targets**, and delivery **Targets** through an explicit daemon workflow.
 - A **Provider** supplies execution mechanics for an **Agent Target**, while Bach owns semantics such as workspace safety, git policy, improvement loop, report evidence, required-target fan-out, and policy fan-out.
 - A **Policy** names acceptance criteria above individual **Quality Reports** and may aggregate required targets, reviewer agents, and quality gates.
 - An **Improvement Loop** uses **Policy** evidence and findings to decide whether an **Agent Target** should keep working or stop.
