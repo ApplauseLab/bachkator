@@ -1,0 +1,57 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - copyloopvar
+    - cyclop
+    - dupl
+    - dupword
+    - durationcheck
+    - errcheck
+    - exhaustive
+    - forcetypeassert
+    - funlen
+    - gocritic
+    - govet
+    - ineffassign
+    - interfacebloat
+    - makezero
+    - misspell
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+    dupl:
+      threshold: 200
+    cyclop:
+      max-complexity: 40
+      package-average: 10
+    funlen:
+      lines: 500
+      statements: 120
+      ignore-comments: true
+    gocognit:
+      min-complexity: 35
+    interfacebloat:
+      max: 8
+
+formatters:
+  enable:
+    - gofmt
+    - golines
+  settings:
+    golines:
+      max-len: 100

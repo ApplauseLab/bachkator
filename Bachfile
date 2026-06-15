@@ -1,0 +1,257 @@
+# vim: set ft=hcl :
+
+project "bachkator" {
+  root    = "."
+  default = "shell.test"
+}
+
+var "github_repo" {
+  default = "ApplauseLab/bachkator"
+}
+
+var "release_version" {
+  default = ""
+}
+
+var "bats_version" {
+  default = "v1.12.0"
+}
+
+# Example computed release/image tag:
+# var "image_tag" {
+#   default = "${git_short_sha()}${git_dirty_suffix()}"
+# }
+
+env {
+  BACH_VERSION = var.release_version
+}
+
+provider "opencode" {
+  type    = "agent"
+  command = ["opencode", "run"]
+}
+
+input "file" "go_sources" {
+  srcs = ["go.mod", "go.sum", ".golangci.yml", "cmd", "internal", "docs", "README.md", "install.sh"]
+}
+
+input "file" "release_sources" {
+  srcs = [input.file.go_sources, "scripts/build-release-archive.sh"]
+}
+
+input "file" "e2e_sources" {
+  srcs = [input.file.go_sources, "test/e2e", "scripts/run-bats-e2e.sh"]
+}
+
+shell "install-bats" {
+  command = [
+    "sh",
+    "-c",
+    "rm -rf .bach/tools/bats-core .bach/tools/bats-core.tar.gz && mkdir -p .bach/tools && curl -fsSL \"https://github.com/bats-core/bats-core/archive/refs/tags/${var.bats_version}.tar.gz\" -o .bach/tools/bats-core.tar.gz && mkdir -p .bach/tools/bats-core && tar -xzf .bach/tools/bats-core.tar.gz --strip-components=1 -C .bach/tools/bats-core && rm .bach/tools/bats-core.tar.gz",
+  ]
+  tools = [{
+    name = "curl"
+  }]
+  outputs = [".bach/tools/bats-core/bin/bats"]
+}
+
+shell "docs-generate" {
+  description = "Generate reference documentation from fragments"
+  command     = ["go", "run", "./cmd/bach-docs-gen"]
+  inputs      = ["cmd/bach-docs-gen", "docs/reference"]
+  outputs     = ["docs/reference.md"]
+}
+
+shell "fmt" {
+  description = "Format Go source files"
+  command     = ["golangci-lint", "fmt"]
+  tools = [{
+    name    = "golangci-lint"
+    command = ["sh", "-c", "golangci-lint version | grep -q 'version 2\\.'"]
+    version = "v2"
+  }]
+}
+
+shell "file-lines" {
+  description = "Enforce Go file size budget"
+  command     = ["go", "run", "./cmd/bach-file-lines", "--limit", "500", "--baseline", "docs/architecture/go-file-size-baseline.txt", "cmd", "internal"]
+  inputs      = [input.file.go_sources]
+}
+
+shell "test" {
+  command = ["sh", "-c", "mkdir -p .bach/artifacts && go test -coverprofile=.bach/artifacts/coverage.out ./..."]
+  inputs  = [input.file.go_sources]
+  outputs = {
+    coverage = ".bach/artifacts/coverage.out"
+  }
+}
+
+shell "e2e" {
+  depends_on = [shell.build, shell.install-bats]
+  command    = ["sh", "scripts/run-bats-e2e.sh"]
+  inputs     = [input.file.e2e_sources]
+  outputs = {
+    junit = ".bach/artifacts/bats-junit.xml"
+  }
+}
+
+quality "shell.e2e" {
+  junit {
+    path   = shell.e2e.outputs.junit
+    format = "junit-xml"
+  }
+
+  quality_gate {
+    metric = "tests.failed"
+    max    = 0
+  }
+}
+
+quality "shell.test" {
+  cov {
+    path   = shell.test.outputs.coverage
+    format = "go-cover"
+  }
+
+  quality_gate {
+    metric = "coverage.line.percent"
+    min    = 20
+  }
+}
+
+shell "lint" {
+  depends_on = [shell.file-lines]
+  command = [
+    "sh",
+    "-c",
+    "mkdir -p .bach/artifacts && golangci-lint run --issues-exit-code=0 --max-issues-per-linter=10 --max-same-issues=10 --output.checkstyle.path=.bach/artifacts/checkstyle-full.xml --output.text.path=/dev/null && go run ./cmd/bach-lint-cap --in .bach/artifacts/checkstyle-full.xml --out .bach/artifacts/checkstyle.xml --limit 10",
+  ]
+  tools = [{
+    name    = "golangci-lint"
+    command = ["sh", "-c", "golangci-lint version | grep -q 'version 2\\.'"]
+    version = "v2"
+  }]
+  inputs = [input.file.go_sources]
+  outputs = {
+    checkstyle = ".bach/artifacts/checkstyle.xml"
+  }
+}
+
+quality "shell.lint" {
+  lint {
+    path   = shell.lint.outputs.checkstyle
+    format = "checkstyle-xml"
+  }
+
+  quality_gate {
+    metric = "issues.total.count"
+    max    = 0
+  }
+}
+
+group "gate" {
+  description = "Run lint, unit tests, and e2e tests as one deduplicated graph"
+  targets     = [shell.lint, shell.test, shell.e2e]
+}
+
+agent "init_command_provider_scaffold" {
+  mode     = "implement"
+  provider = provider.opencode
+  role     = "implementer"
+  plan     = "plans/phase-11-init-command-provider-scaffold.md"
+
+  workspace {
+    mode = "clone"
+    path = ".bach/agents/init-command-provider-scaffold"
+  }
+
+  git {
+    branch = "bach/phase-11-init-command-provider-scaffold"
+    commit = "required"
+  }
+}
+
+shell "build" {
+  command = ["sh", "-c", "mkdir -p dist && go build -ldflags '-X main.version=dev' -o dist/bach ./cmd/bach"]
+  inputs  = [input.file.go_sources]
+  outputs = ["dist/bach"]
+}
+
+shell "build-release-darwin-amd64" {
+  depends_on = [shell.test]
+  env {
+    CGO_ENABLED = "0"
+    GOARCH      = "amd64"
+    GOOS        = "darwin"
+  }
+  command = ["sh", "scripts/build-release-archive.sh"]
+  inputs  = [input.file.release_sources]
+  outputs = ["dist/bachkator_darwin_amd64.tar.gz"]
+}
+
+shell "build-release-darwin-arm64" {
+  depends_on = [shell.test]
+  env {
+    CGO_ENABLED = "0"
+    GOARCH      = "arm64"
+    GOOS        = "darwin"
+  }
+  command = ["sh", "scripts/build-release-archive.sh"]
+  inputs  = [input.file.release_sources]
+  outputs = ["dist/bachkator_darwin_arm64.tar.gz"]
+}
+
+shell "build-release-linux-amd64" {
+  depends_on = [shell.test]
+  env {
+    CGO_ENABLED = "0"
+    GOARCH      = "amd64"
+    GOOS        = "linux"
+  }
+  command = ["sh", "scripts/build-release-archive.sh"]
+  inputs  = [input.file.release_sources]
+  outputs = ["dist/bachkator_linux_amd64.tar.gz"]
+}
+
+shell "build-release-linux-arm64" {
+  depends_on = [shell.test]
+  env {
+    CGO_ENABLED = "0"
+    GOARCH      = "arm64"
+    GOOS        = "linux"
+  }
+  command = ["sh", "scripts/build-release-archive.sh"]
+  inputs  = [input.file.release_sources]
+  outputs = ["dist/bachkator_linux_arm64.tar.gz"]
+}
+
+shell "build-release" {
+  depends_on = [
+    shell.build-release-darwin-amd64,
+    shell.build-release-darwin-arm64,
+    shell.build-release-linux-amd64,
+    shell.build-release-linux-arm64,
+  ]
+}
+
+shell "github-release" {
+  depends_on = [shell.build-release]
+  command = [
+    "gh",
+    "release",
+    "create",
+    var.release_version,
+    "dist/bachkator_darwin_amd64.tar.gz",
+    "dist/bachkator_darwin_arm64.tar.gz",
+    "dist/bachkator_linux_amd64.tar.gz",
+    "dist/bachkator_linux_arm64.tar.gz",
+    "--repo",
+    var.github_repo,
+    "--target",
+    "$BACH_GIT_COMMIT",
+    "--title",
+    "Bachkator ${var.release_version}",
+    "--generate-notes",
+    "--latest",
+  ]
+}
