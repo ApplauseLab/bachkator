@@ -1,0 +1,68 @@
+name: PR Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Bach gate with main Bachfile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout base automation
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .bach-main
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: .bach-main/go.mod
+          cache-dependency-path: .bach-main/go.sum
+
+      - name: Build trusted Bachkator runner
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/bin"
+          go build -C .bach-main -o "${RUNNER_TEMP}/bin/bach" ./cmd/bach
+          printf '%s\n' "${RUNNER_TEMP}/bin" >> "${GITHUB_PATH}"
+
+      - name: Checkout pull request
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: subject
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Use base gate contract
+        run: |
+          set -euo pipefail
+          cp .bach-main/Bachfile subject/Bachfile
+          cp .bach-main/.golangci.yml subject/.golangci.yml
+          cp .bach-main/scripts/run-bats-e2e.sh subject/scripts/run-bats-e2e.sh
+          rm -rf subject/cmd/bach-file-lines subject/cmd/bach-lint-cap
+          cp -R .bach-main/cmd/bach-file-lines subject/cmd/bach-file-lines
+          cp -R .bach-main/cmd/bach-lint-cap subject/cmd/bach-lint-cap
+
+      - name: Install golangci-lint
+        working-directory: subject
+        run: |
+          set -euo pipefail
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
+          printf '%s\n' "$(go env GOPATH)/bin" >> "${GITHUB_PATH}"
+
+      - name: Run Bach gate
+        working-directory: subject
+        run: bach run --log-only --force group/gate

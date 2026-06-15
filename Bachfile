@@ -269,3 +269,30 @@ shell "github-release" {
     "--latest",
   ]
 }
+
+shell "github-release-publish" {
+  command = [
+    "gh",
+    "release",
+    "create",
+    var.release_version,
+    "dist/bachkator_darwin_amd64.tar.gz",
+    "dist/bachkator_darwin_arm64.tar.gz",
+    "dist/bachkator_linux_amd64.tar.gz",
+    "dist/bachkator_linux_arm64.tar.gz",
+    "--repo",
+    var.github_repo,
+    "--target",
+    "$BACH_GIT_COMMIT",
+    "--title",
+    "Bachkator ${var.release_version}",
+    "--generate-notes",
+    "--latest",
+  ]
+  inputs = [
+    "dist/bachkator_darwin_amd64.tar.gz",
+    "dist/bachkator_darwin_arm64.tar.gz",
+    "dist/bachkator_linux_amd64.tar.gz",
+    "dist/bachkator_linux_arm64.tar.gz",
+  ]
+}

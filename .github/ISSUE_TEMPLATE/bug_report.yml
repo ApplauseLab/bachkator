@@ -1,0 +1,45 @@
+name: Bug Report
+description: Report a reproducible Bachkator defect.
+title: "fix: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a Bachkator bug. Include the exact Bach target or CLI command so maintainers can reproduce it through the same contract.
+        Do not paste secrets, tokens, private credentials, or sensitive run/state data. Redact before sharing logs or JSON output.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What failed, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: List the smallest commands, Bachfile snippet, or fixture needed to reproduce.
+      placeholder: |
+        1. Run `bach ...`
+        2. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Paste concise logs, run IDs, `.bach/runs/...` paths, or JSON output.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Bachkator version or commit
+      placeholder: v0.1.2 or git SHA
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, shell, Go version, and relevant tools such as golangci-lint or gh.
+      render: text

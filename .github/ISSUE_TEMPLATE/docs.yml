@@ -1,0 +1,28 @@
+name: Documentation
+description: Report stale, missing, or confusing docs.
+title: "docs: "
+labels:
+  - documentation
+body:
+  - type: markdown
+    attributes:
+      value: Do not paste secrets, tokens, private credentials, or sensitive run/state data in public issues.
+  - type: textarea
+    id: location
+    attributes:
+      label: Location
+      description: Link or name the README, reference fragment, guide, ADR, or schema.
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue
+      description: What is stale, missing, duplicated, or unclear?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Documentation
+      description: What should the docs say or show instead?

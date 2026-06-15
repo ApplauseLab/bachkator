@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Bachkator reference docs
+    url: https://github.com/ApplauseLab/bachkator/blob/main/docs/reference.md
+    about: Check the embedded reference source before filing usage questions.

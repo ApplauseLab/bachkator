@@ -1,0 +1,46 @@
+name: Feature Request
+description: Propose a Bachkator capability or workflow improvement.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: Do not paste secrets, tokens, private credentials, or sensitive run/state data in public issues.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What repository operation, agent loop, or delivery lane is hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should Bachkator do differently?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI Contract
+        - Bachfile syntax
+        - Target execution
+        - Agent Targets
+        - Plans
+        - Factory Work Items
+        - Backend Providers
+        - Trigger Providers
+        - Quality and policy
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Example
+      description: Include a CLI example, Bachfile sketch, or expected output if useful.
+      render: text

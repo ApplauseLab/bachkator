@@ -1,0 +1,35 @@
+name: Factory Workflow
+description: Propose or refine unattended Factory behavior.
+title: "feat(factory): "
+labels:
+  - factory
+body:
+  - type: markdown
+    attributes:
+      value: Do not paste secrets, tokens, private credentials, private approval details, or sensitive run/state data in public issues.
+  - type: textarea
+    id: lane
+    attributes:
+      label: Delivery Lane
+      description: Describe the Factory Workflow, trigger source, approval points, and deploy/verify phases.
+      placeholder: intake -> plan -> approval -> implement -> merge -> deploy -> verify
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Required Evidence
+      description: What Plans, Runs, logs, findings, approvals, or Backend records must exist?
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks And Guards
+      description: Note remote/destructive actions, required confirmations, locks, credentials, or managed-control-plane needs.
+      placeholder: Do not paste secrets, tokens, private credentials, or private approval details.
+  - type: textarea
+    id: sketch
+    attributes:
+      label: Bachfile Sketch
+      render: hcl

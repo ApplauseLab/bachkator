@@ -99,6 +99,7 @@ Logs are under:
 - `shell/docs-generate`: regenerate `docs/reference.md` from `docs/reference/*.md`.
 - `shell/build-release`: build macOS/Linux amd64/arm64 release archives.
 - `shell/github-release`: create a GitHub release with the release archives.
+- `shell/github-release-publish`: publish an already-built GitHub release without rebuilding archives.
 
 ## Release Rule
 
@@ -110,6 +111,7 @@ go run ./cmd/bach --var release_version=vX.Y.Z run shell/github-release
 ```
 
 The release target pins the GitHub tag to `$BACH_GIT_COMMIT` and uploads all multi-platform archives.
+The publish-only release target is for workflows that have already built and transferred archives before entering a write-permission publish phase.
 
 ## Repository-Wide Notes
 
@@ -177,6 +179,7 @@ Avoid shell-local variables like `$out` inside Bach `shell` strings because Bach
 ## Child DOX Index
 
 - `cmd/AGENTS.md`: executable entry points and command-specific generation binaries.
+- `.github/AGENTS.md`: GitHub Actions workflows, local composite actions, issue forms, and pull request templates.
 - `internal/AGENTS.md`: internal Go packages, domain boundaries, and import-direction rules.
 - `docs/AGENTS.md`: documentation, reference fragments, ADRs, schemas, and agent-facing guides.
 - `examples/AGENTS.md`: example Bachfiles, plugins, and sample projects.
