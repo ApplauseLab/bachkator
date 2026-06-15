@@ -23,7 +23,7 @@ func runTarget(
 		return fmt.Errorf("no target provided and no default target configured")
 	}
 	if opts.json && !opts.dryRun {
-		return fmt.Errorf("-json is only supported with -dry-run")
+		return fmt.Errorf("--json is only supported with --dry-run")
 	}
 	canonicalNames := make([]string, 0, len(targetNames))
 	seen := map[string]bool{}

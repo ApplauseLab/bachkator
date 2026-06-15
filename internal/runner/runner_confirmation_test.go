@@ -27,8 +27,8 @@ func TestRunnerBlocksRequiresConfirmationWithoutYes(t *testing.T) {
 	err := (&Runner{Stdout: &out, Stderr: &out}).Run(context.Background(), project, "shell/deploy")
 	if err == nil ||
 		!strings.Contains(err.Error(), `target "shell/deploy" requires confirmation`) ||
-		!strings.Contains(err.Error(), "-dry-run") ||
-		!strings.Contains(err.Error(), "-yes") {
+		!strings.Contains(err.Error(), "--dry-run") ||
+		!strings.Contains(err.Error(), "--yes") {
 		t.Fatalf("error = %v, want confirmation guard with hints", err)
 	}
 	if _, statErr := os.Stat(filepath.Join(dir, "deployed.txt")); !os.IsNotExist(statErr) {

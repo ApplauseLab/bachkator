@@ -102,7 +102,7 @@ func (r *Runner) RunTargets(ctx context.Context, project *Project, names []strin
 	if !r.DryRun && !r.Yes {
 		if plan.EffectiveRisk.RequiresConfirmation {
 			return fmt.Errorf(
-				"target %q requires confirmation (risks: %s); run with -dry-run to inspect or -yes to execute",
+				"target %q requires confirmation (risks: %s); run with --dry-run to inspect or --yes to execute",
 				plan.TargetName,
 				strings.Join(plan.EffectiveRisk.Labels(), ", "),
 			)
