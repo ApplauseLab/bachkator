@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ApplauseLab/bachkator/docs/schemas/provider-summary.schema.json",
+  "title": "Bachkator Provider Summary Evidence",
+  "type": "object",
+  "required": ["schema", "provider", "session_id"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "bach.provider_summary.v1" },
+    "provider": { "const": "opencode" },
+    "session_id": { "type": "string" },
+    "finish_reason": { "type": "string" },
+    "tokens": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "cost": { "type": ["number", "null"] }
+  }
+}

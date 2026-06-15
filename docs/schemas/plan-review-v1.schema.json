@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bachkator.dev/schemas/plan-review-v1.schema.json",
+  "title": "Bach Plan Review Queue v1",
+  "type": "object",
+  "required": ["schema_version", "implemented", "needs_review", "failed", "blocked", "skipped"],
+  "properties": {
+    "schema_version": { "const": "bach.plan_review.v1" },
+    "implemented": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reviewItem" }
+    },
+    "needs_review": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reviewItem" }
+    },
+    "failed": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reviewItem" }
+    },
+    "blocked": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reviewItem" }
+    },
+    "skipped": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reviewItem" }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "reviewItem": {
+      "type": "object",
+      "required": ["plan_id", "plan_path", "title", "state"],
+      "properties": {
+        "plan_id": { "type": "string", "minLength": 1 },
+        "plan_path": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "state": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string" },
+        "run_id": { "type": "string" },
+        "target": { "type": "string" },
+        "ledger_id": { "type": "string" },
+        "diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diagnostic" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["severity", "message", "code"],
+      "properties": {
+        "severity": { "enum": ["error", "warning", "info"] },
+        "message": { "type": "string" },
+        "code": { "type": "string" },
+        "file": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

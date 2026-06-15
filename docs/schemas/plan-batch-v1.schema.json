@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bachkator.dev/schemas/plan-batch-v1.schema.json",
+  "title": "Bach Plan Batch Result v1",
+  "type": "object",
+  "required": ["schema_version", "plans", "waves"],
+  "properties": {
+    "schema_version": { "const": "bach.plan_batch.v1" },
+    "plans": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/planResult" }
+    },
+    "waves": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "ended_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "planResult": {
+      "type": "object",
+      "required": ["file", "id", "title", "state"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "state": {
+          "enum": ["implemented", "already_implemented", "failed", "blocked", "skipped"]
+        },
+        "reason": { "type": "string" },
+        "run_id": { "type": "string" },
+        "target": { "type": "string" },
+        "ledger_id": { "type": "string" },
+        "diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diagnostic" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["severity", "message", "code"],
+      "properties": {
+        "severity": { "enum": ["error", "warning", "info"] },
+        "message": { "type": "string" },
+        "code": { "type": "string" },
+        "file": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

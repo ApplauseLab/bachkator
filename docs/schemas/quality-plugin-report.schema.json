@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ApplauseLab/bachkator/docs/schemas/quality-plugin-report.schema.json",
+  "title": "Bachkator Quality Plugin Report",
+  "type": "object",
+  "additionalProperties": false,
+  "anyOf": [
+    { "required": ["metrics"] },
+    { "required": ["findings"] }
+  ],
+  "properties": {
+    "metrics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/metric" }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "metric": {
+      "type": "object",
+      "required": ["name", "value"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "scope": { "type": "string" },
+        "value": { "type": "number" },
+        "unit": { "type": "string" }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": true,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 0 },
+        "severity": { "type": "string" },
+        "rule": { "type": "string" },
+        "message": { "type": "string" },
+        "duration_ms": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

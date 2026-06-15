@@ -1,0 +1,3 @@
+# Existing files over the 500-line limit are capped at their current size.
+# New Go files must stay <=500 lines, and these files must not grow.
+# No current baseline entries.

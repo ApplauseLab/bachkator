@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bachkator.dev/schemas/backend-evidence-ref-v1.schema.json",
+  "title": "Bach Backend Evidence Reference v1",
+  "type": "object",
+  "required": ["schema_version", "id", "kind", "uri"],
+  "properties": {
+    "schema_version": { "const": "bach.backend.evidence_ref.v1" },
+    "id": { "type": "string", "format": "uuid" },
+    "kind": { "type": "string", "minLength": 1 },
+    "uri": { "type": "string", "minLength": 1 },
+    "hash": { "type": "string" },
+    "run_id": { "type": "string", "format": "uuid" },
+    "target": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "metadata": { "type": "object", "additionalProperties": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

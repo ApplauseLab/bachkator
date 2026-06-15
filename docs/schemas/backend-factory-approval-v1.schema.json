@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bachkator.dev/schemas/backend-factory-approval-v1.schema.json",
+  "title": "Bach Backend Factory Approval v1",
+  "type": "object",
+  "required": [
+    "approval_id",
+    "factory",
+    "workflow",
+    "work_item_id",
+    "attempt_id",
+    "phase",
+    "approved_at"
+  ],
+  "properties": {
+    "approval_id": { "type": "string", "minLength": 1 },
+    "factory": { "type": "string", "minLength": 1 },
+    "workflow": { "type": "string", "minLength": 1 },
+    "work_item_id": { "type": "string", "minLength": 1 },
+    "attempt_id": { "type": "string", "minLength": 1 },
+    "phase": { "type": "string", "minLength": 1 },
+    "plan_path": { "type": "string" },
+    "plan_hash": { "type": "string" },
+    "approved_at": { "type": "string", "format": "date-time" },
+    "approver": { "type": "string" },
+    "approver_source": { "enum": ["git", "env", "os_user", "unknown"] },
+    "reason": { "type": "string" },
+    "metadata": { "type": "object", "additionalProperties": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

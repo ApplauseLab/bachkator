@@ -1,0 +1,3 @@
+# Internal Compile-Time Extension Points
+
+Bachkator should evolve toward internal compile-time registries and extension points for independently developed features such as target kinds, config block families, quality report parsers, quality gates, and CLI subcommands. These seams are for Bachkator's own packages, not a public Go API or runtime plugin system, so they can support parallel feature work while preserving the **CLI Contract** and current graph-load plugin boundary. Extension interfaces should stay small and proven by concrete features rather than becoming a speculative framework before multiple implementations exist.

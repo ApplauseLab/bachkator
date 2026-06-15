@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bachkator.dev/schemas/trigger-provider-v1.schema.json",
+  "title": "Bach Trigger Provider v1",
+  "type": "object",
+  "$defs": {
+    "Capability": {
+      "type": "string",
+      "enum": ["poll", "ack", "nack"]
+    },
+    "Error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "details": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+    "HandshakeParams": {
+      "type": "object",
+      "required": ["protocol", "factory", "trigger"],
+      "properties": {
+        "protocol": { "const": "bach.trigger.v1" },
+        "factory": { "type": "string", "minLength": 1 },
+        "trigger": { "type": "string", "minLength": 1 },
+        "config": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "HandshakeResult": {
+      "type": "object",
+      "required": ["protocol", "provider", "version", "capabilities"],
+      "properties": {
+        "protocol": { "const": "bach.trigger.v1" },
+        "provider": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "capabilities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Capability" },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "PollParams": {
+      "type": "object",
+      "required": ["cursor"],
+      "properties": {
+        "cursor": { "type": "string" },
+        "config": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "PollResult": {
+      "type": "object",
+      "required": ["cursor", "items"],
+      "properties": {
+        "cursor": { "type": "string" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/PollItem" } }
+      },
+      "additionalProperties": false
+    },
+    "PollItem": {
+      "type": "object",
+      "required": ["source", "title"],
+      "properties": {
+        "source": { "$ref": "#/$defs/ItemSource" },
+        "title": { "type": "string", "minLength": 1 },
+        "body": { "type": "string" },
+        "labels": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "priority": { "type": "string", "enum": ["critical", "urgent", "high", "normal", "low"] },
+        "metadata": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "ItemSource": {
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "url": { "type": "string" },
+        "revision": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "AckParams": {
+      "type": "object",
+      "required": ["cursor"],
+      "properties": {
+        "cursor": { "type": "string" },
+        "source_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      },
+      "additionalProperties": false
+    },
+    "NackParams": {
+      "type": "object",
+      "required": ["cursor", "reason"],
+      "properties": {
+        "cursor": { "type": "string" },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}
