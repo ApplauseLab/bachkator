@@ -1,0 +1,9 @@
+{
+  "name": "@app/web",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@app/api": "workspace:*"
+  }
+}

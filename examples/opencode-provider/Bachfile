@@ -1,0 +1,114 @@
+# vim: set ft=hcl :
+
+# Minimal first-class OpenCode provider example.
+#
+# Inspect without launching OpenCode:
+#
+#   go run ./cmd/bach -f examples/opencode-provider/Bachfile list
+#   go run ./cmd/bach -f examples/opencode-provider/Bachfile --dry-run run agent/print_environment
+#
+# Run the agent when OpenCode is installed and authenticated:
+#
+#   go run ./cmd/bach -f examples/opencode-provider/Bachfile run agent/print_environment
+
+project "opencode-provider-example" {
+  root    = "."
+  default = "agent.print_environment"
+
+  backend {
+    type    = "stdio"
+    command = ["bach", "backend", "sqlite"]
+    config = { path = ".bach/opencode-provider-example.db" }
+  }
+}
+
+provider "opencode" {
+  type = "opencode"
+}
+
+prompt "print_environment" {
+  path        = "examples/opencode-provider/prompt.md"
+  description = "Ask OpenCode to print Bach agent environment variables"
+  version     = "v1"
+}
+
+prompt "bach_report" {
+  path        = "examples/opencode-provider/report-prompt.md"
+  description = "Ask OpenCode to write supplemental quality evidence with bach report"
+  version     = "v1"
+}
+
+prompt "resume_demo" {
+  path        = "examples/opencode-provider/resume-prompt.md"
+  description = "Force a policy failure so OpenCode resumes on attempt 2"
+  version     = "v1"
+}
+
+shell "resume_marker_check" {
+  description = "Policy check that passes only after the resume marker exists"
+  command     = ["sh", "-c", "test -f agent-output/resume-marker.txt"]
+}
+
+policy "resume_marker" {
+  required_targets = [shell.resume_marker_check]
+}
+
+agent "print_environment" {
+  mode     = "implement"
+  provider = provider.opencode
+  role     = "environment-printer"
+  prompt   = prompt.print_environment
+  plan     = "examples/opencode-provider/plan.md"
+
+  workspace {
+    mode = "clone"
+    path = ".bach/agents/opencode-provider-print-environment"
+  }
+
+  git {
+    branch = "bach/examples/opencode-provider-print-environment"
+    commit = "required"
+  }
+}
+
+agent "bach_report_summary" {
+  mode     = "implement"
+  provider = provider.opencode
+  role     = "bach-report-demo"
+  prompt   = prompt.bach_report
+  plan     = "examples/opencode-provider/report-plan.md"
+
+  workspace {
+    mode = "clone"
+    path = ".bach/agents/opencode-provider-bach-report-summary"
+  }
+
+  git {
+    branch = "bach/examples/opencode-provider-bach-report-summary"
+    commit = "required"
+  }
+}
+
+agent "resume_session" {
+  mode     = "implement"
+  provider = provider.opencode
+  role     = "resume-demo"
+  prompt   = prompt.resume_demo
+  plan     = "examples/opencode-provider/resume-plan.md"
+  policy   = policy.resume_marker
+
+  improve {
+    max_attempts = 2
+    until        = "policy.passed"
+  }
+
+  workspace {
+    mode = "clone"
+    path = ".bach/agents/opencode-provider-resume-session"
+  }
+
+  git {
+    branch = "bach/examples/opencode-provider-resume-session"
+    commit = "required"
+  }
+}

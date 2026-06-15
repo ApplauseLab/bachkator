@@ -1,0 +1,10 @@
+{
+  "name": "@app/core",
+  "exports": {
+    ".": "./src/index.ts",
+    "./feature": {
+      "import": "./src/feature.ts",
+      "default": "./src/feature.ts"
+    }
+  }
+}

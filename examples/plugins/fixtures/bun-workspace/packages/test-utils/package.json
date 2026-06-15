@@ -1,0 +1,7 @@
+{
+  "name": "@app/test-utils",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@app/core": "workspace:*"
+  }
+}

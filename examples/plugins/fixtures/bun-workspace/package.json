@@ -1,0 +1,5 @@
+{
+  "name": "bun-workspace-fixture",
+  "private": true,
+  "workspaces": ["packages/*"]
+}
