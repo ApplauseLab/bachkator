@@ -31,6 +31,9 @@ jobs:
           go-version-file: .bach-main/go.mod
           cache-dependency-path: .bach-main/go.sum
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Build trusted Bachkator runner
         run: |
           set -euo pipefail
