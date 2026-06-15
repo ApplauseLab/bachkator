@@ -22,7 +22,7 @@ You are feature-agent-$feature_number for Bachkator's Atelier context-speed prog
 
 Feature: $title.
 Branch: $branch.
-Source request file: atelier-context-speed-feature-requests.md.
+Source request: command arguments supplied to this script.
 Checkpoint file: $checkpoint_file.
 
 Acceptance notes:

@@ -17,6 +17,10 @@ var "bats_version" {
   default = "v1.12.0"
 }
 
+var "commit_msg_file" {
+  default = ""
+}
+
 # Example computed release/image tag:
 # var "image_tag" {
 #   default = "${git_short_sha()}${git_dirty_suffix()}"
@@ -53,6 +57,18 @@ shell "install-bats" {
     name = "curl"
   }]
   outputs = [".bach/tools/bats-core/bin/bats"]
+}
+
+shell "commit-msg" {
+  description = "Validate a semantic commit message"
+  command     = ["sh", ".githooks/commit-msg", var.commit_msg_file]
+  inputs      = [".githooks/commit-msg"]
+}
+
+shell "install-git-hooks" {
+  description = "Configure Git to use tracked hooks"
+  command     = ["git", "config", "core.hooksPath", ".githooks"]
+  inputs      = [".githooks/commit-msg"]
 }
 
 shell "docs-generate" {

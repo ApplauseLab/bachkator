@@ -87,6 +87,8 @@ Logs are under:
 ## Current Targets
 
 - `agent/init_command_provider_scaffold`: run the phase 11 init-command provider scaffold agent.
+- `shell/commit-msg`: validate a commit message file against the semantic commit rule.
+- `shell/install-git-hooks`: configure Git to use tracked hooks from `.githooks/`.
 - `shell/test`: run the Go test suite.
 - `shell/lint`: run golangci-lint, parse Checkstyle output, and enforce zero lint issues.
 - `shell/file-lines`: enforce the Go file size budget with a 500-line default and a baseline for existing oversized files.
@@ -112,6 +114,8 @@ The release target pins the GitHub tag to `$BACH_GIT_COMMIT` and uploads all mul
 ## Repository-Wide Notes
 
 - Do not commit `.bach/`, `dist/`, or `.opencode-snitch-off`.
+- Use semantic commit messages in the form `type(scope): subject` or `type: subject`; allowed types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, and `revert`.
+- The semantic commit hook is `.githooks/commit-msg`; install it with `go run ./cmd/bach run shell/install-git-hooks` and validate message files with `go run ./cmd/bach --var commit_msg_file=/path/to/message run shell/commit-msg`.
 - `shell/fmt` and `shell/lint` require a golangci-lint v2-compatible binary on `PATH`; `.golangci.yml` enables `gofmt`, `golines` at 100 columns, and `dupl` duplication checks.
 - Keep lint output bounded; the `shell/lint` target caps golangci-lint text and Checkstyle output to the first 10 total findings so run logs and artifacts stay readable.
 - Keep Go files at or below 500 lines. Existing larger files are listed in `docs/architecture/go-file-size-baseline.txt`; do not let baseline files grow, and split them during architecture work.
@@ -127,8 +131,6 @@ The release target pins the GitHub tag to `$BACH_GIT_COMMIT` and uploads all mul
 ## Parallel Phase Work
 
 When orchestrating implementation phases in parallel, prefer a dedicated Bachfile such as `Bachfile.batch` over ad hoc shell scripts. Use a `pipeline` target for the sequential merge/test phase, and use normal `depends_on` fan-out for parallel implementation targets.
-
-`Bachfile.plans` owns the next planned implementation lane. Use it with `go run ./cmd/bach --file Bachfile.plans list` and dry-run `pipeline/next_plans` before starting phase agents from that file.
 
 For non-interactive OpenCode workers, use `opencode run <prompt>`. If the user explicitly approves broad worktree access, pass `--dangerously-skip-permissions`; otherwise agents may be blocked from reading or testing external worktrees.
 
