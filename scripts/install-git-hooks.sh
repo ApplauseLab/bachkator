@@ -2,12 +2,13 @@
 set -eu
 
 existing="$(git config --local --get core.hooksPath || true)"
+hook_dir="$(git rev-parse --git-path hooks)"
 
 case "$existing" in
   "")
-    for hook in .git/hooks/*; do
+    for hook in "$hook_dir"/*; do
       [ -e "$hook" ] || continue
-      case "$hook" in
+      case "${hook##*/}" in
         *.sample) continue ;;
       esac
       printf 'refusing to replace existing local Git hook: %s\n' "$hook" >&2
