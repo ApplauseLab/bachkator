@@ -20,10 +20,10 @@ sh scripts/agents/run-agent.sh \
   --log-dir ".bach/architecture-agent-runs" \
   --checkpoint ".bach/opencode-sessions/architecture-phase-agent-$agent_number.checkpoint" \
   --prompt-file ".bach/opencode-sessions/architecture-phase-agent-$agent_number.prompt.md" \
-  --dry-run-commands "go run ./cmd/bach -f Bachfile.architecture-migration.verification -dry-run $acceptance_target" \
-  --acceptance "go run ./cmd/bach -f Bachfile.architecture-migration.verification $acceptance_target" \
-  --full-test "go run ./cmd/bach shell/test if feasible for the slice" \
-  --gate "go run ./cmd/bach -f Bachfile.architecture-migration.verification $acceptance_target" \
+  --dry-run-commands "go run ./cmd/bach --file Bachfile.architecture-migration.verification run --dry-run $acceptance_target" \
+  --acceptance "go run ./cmd/bach --file Bachfile.architecture-migration.verification run $acceptance_target" \
+  --full-test "go run ./cmd/bach run shell/test if feasible for the slice" \
+  --gate "go run ./cmd/bach --file Bachfile.architecture-migration.verification run $acceptance_target" \
   --completed-marker "$completed" \
   --failed-marker "$failed" \
   --extra-rule "Verification file: Bachfile.architecture-migration.verification." \

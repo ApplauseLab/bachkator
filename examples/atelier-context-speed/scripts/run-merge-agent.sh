@@ -30,7 +30,7 @@ Rules:
 - Merge with a normal non-fast-forward merge unless the branch is already merged.
 - If conflicts occur, resolve them carefully and preserve existing target fields and runner behavior.
 - After every merge or conflict resolution, run: go run ./cmd/bach affected
-- Then run: go run ./cmd/bach shell/test
+- Then run: go run ./cmd/bach run shell/test
 - Leave the worktree clean except for the merge commit created by this operation.
 - When and only when the merge and tests are complete, write final readiness marker exactly: $completed
 - If blocked, conflicts cannot be resolved, the branch is missing, or tests fail, write: $failed: reason

@@ -18,4 +18,4 @@ OPENCODE_RUN_FLAGS="${OPENCODE_RUN_FLAGS:---dangerously-skip-permissions}" \
   --log-dir ".bach/overnight-agent-runs" \
   --checkpoint ".bach/opencode-sessions/overnight-$phase_slug.checkpoint" \
   --prompt-file ".bach/opencode-sessions/overnight-$phase_slug.prompt.md" \
-  --gate "go run ./cmd/bach --log-only --force run group/gate"
+  --gate "go run ./cmd/bach run --log-only --force group/gate"

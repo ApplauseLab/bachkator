@@ -11,7 +11,7 @@ Work rules:
 - Implement only the assigned phase.
 - Keep changes minimal and aligned with the existing Target, Run, Quality, Policy, and Agent terminology.
 - After edits, run `go run ./cmd/bach affected`.
-- Run focused Bach targets as needed, then run `go run ./cmd/bach --log-only --force run group/gate` before handing off.
+- Run focused Bach targets as needed, then run `go run ./cmd/bach run --log-only --force group/gate` before handing off.
 - Commit only intended files on the assigned branch.
 - Do not merge back to the main checkout.
 

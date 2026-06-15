@@ -4,10 +4,10 @@
 #
 # Demo commands:
 #
-#   go run ./cmd/bach -f examples/terraform-delivery/Bachfile list --aliases
-#   go run ./cmd/bach -f examples/terraform-delivery/Bachfile --dry-run run shell/local_check
-#   go run ./cmd/bach -f examples/terraform-delivery/Bachfile run shell/local_check
-#   go run ./cmd/bach -f examples/terraform-delivery/Bachfile explain deploy-infra
+#   go run ./cmd/bach --file examples/terraform-delivery/Bachfile list --aliases
+#   go run ./cmd/bach --file examples/terraform-delivery/Bachfile run --dry-run shell/local_check
+#   go run ./cmd/bach --file examples/terraform-delivery/Bachfile run shell/local_check
+#   go run ./cmd/bach --file examples/terraform-delivery/Bachfile explain deploy-infra
 #
 # The local check flow writes deterministic fixture artifacts under
 # $(RUN_DIRECTORY). The publish target is deliberately marked remote,

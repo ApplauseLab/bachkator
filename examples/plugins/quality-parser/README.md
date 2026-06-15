@@ -5,7 +5,7 @@ This example shows a project-local quality plugin. The `shell/lint` target write
 Run it from this directory:
 
 ```sh
-bach --log-only --force run shell/lint
+bach run --log-only --force shell/lint
 bach quality metrics
 bach quality findings
 bach quality gates
@@ -14,7 +14,7 @@ bach quality gates
 The first run fails the quality gate because `src/app.txt` contains a TODO. Remove the TODO line, then rerun:
 
 ```sh
-bach --log-only --force run shell/lint
+bach run --log-only --force shell/lint
 ```
 
 The parser receives the report path as its first argument and emits normalized JSON on stdout:

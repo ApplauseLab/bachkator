@@ -115,7 +115,7 @@ The release target pins the GitHub tag to `$BACH_GIT_COMMIT` and uploads all mul
 
 - Do not commit `.bach/`, `dist/`, or `.opencode-snitch-off`.
 - Use semantic commit messages in the form `type(scope): subject` or `type: subject`; allowed types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, and `revert`.
-- The semantic commit hook is `.githooks/commit-msg`; install it with `go run ./cmd/bach run shell/install-git-hooks` and validate message files with `go run ./cmd/bach --var commit_msg_file=/path/to/message run shell/commit-msg`.
+- The semantic commit hook is `.githooks/commit-msg`; install it with `go run ./cmd/bach run shell/install-git-hooks` and validate message files with `go run ./cmd/bach --var commit_msg_file=/path/to/message run shell/commit-msg`. The install target refuses to replace an existing custom local hook path.
 - `shell/fmt` and `shell/lint` require a golangci-lint v2-compatible binary on `PATH`; `.golangci.yml` enables `gofmt`, `golines` at 100 columns, and `dupl` duplication checks.
 - Keep lint output bounded; the `shell/lint` target caps golangci-lint text and Checkstyle output to the first 10 total findings so run logs and artifacts stay readable.
 - Keep Go files at or below 500 lines. Existing larger files are listed in `docs/architecture/go-file-size-baseline.txt`; do not let baseline files grow, and split them during architecture work.

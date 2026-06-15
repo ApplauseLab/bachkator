@@ -12,8 +12,8 @@
 #
 # Dry-run without launching agents:
 #
-#   go run ./cmd/bach -f examples/plan-agents/Bachfile --dry-run run pipeline/delivery_program
-#   go run ./cmd/bach -f examples/plan-agents/Bachfile --dry-run run shell/long-running-agent-loop
+#   go run ./cmd/bach --file examples/plan-agents/Bachfile run --dry-run pipeline/delivery_program
+#   go run ./cmd/bach --file examples/plan-agents/Bachfile run --dry-run shell/long-running-agent-loop
 
 project "plan-agent-orchestration" {
   root    = "."

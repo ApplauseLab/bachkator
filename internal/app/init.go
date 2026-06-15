@@ -264,7 +264,7 @@ func starterAgentsFile() string {
 Use Bach for project operations in this repository.
 
 - Start by running ` + "`bach list`" + `.
-- Inspect expensive or side-effecting targets with ` + "`bach --dry-run run <target>`" + `.
+- Inspect expensive or side-effecting targets with ` + "`bach run --dry-run <target>`" + `.
 - Use ` + "`bach affected`" + ` after edits to choose focused validation.
 - Use ` + "`bach reference`" + ` and ` + "`bach reference <topic>`" + ` before guessing Bachfile syntax.
 - Prefer configured Bach targets over raw package-manager, test, lint, build, docs, or release commands.

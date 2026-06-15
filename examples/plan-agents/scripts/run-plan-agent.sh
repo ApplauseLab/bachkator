@@ -17,7 +17,7 @@ failed="PLAN_${plan_number}_FAILED"
 
 profile_args=""
 if [ -n "$profile" ]; then
-  profile_args="-profile $profile"
+  profile_args="--profile $profile"
 fi
 
 mkdir -p "$log_dir" "$(dirname "$prompt_file")"
@@ -36,12 +36,12 @@ Rules:
 - Leave the main checkout untouched.
 - This invocation may be a resumed OpenCode session. Before changing files, inspect the checkpoint file and existing branch/worktree state.
 - Update the checkpoint file after each milestone: worktree ready, dry-run inspected, edits complete, affected targets inspected, acceptance gate passed, committed, blocked, or complete.
-- Start with: go run ./cmd/bach -list
-- Inspect the acceptance gate: go run ./cmd/bach -f examples/plan-agents/Bachfile.verification $profile_args -dry-run $acceptance_target
+- Start with: go run ./cmd/bach list
+- Inspect the acceptance gate: go run ./cmd/bach --file examples/plan-agents/Bachfile.verification $profile_args run --dry-run $acceptance_target
 - After edits, run: go run ./cmd/bach affected
 - If affected targets include shell/lint, or before final handoff in this repository, run:
   go run ./cmd/bach run shell/lint
-- Then run: go run ./cmd/bach -f examples/plan-agents/Bachfile.verification $profile_args $acceptance_target
+- Then run: go run ./cmd/bach --file examples/plan-agents/Bachfile.verification $profile_args run $acceptance_target
 - Commit only intended feature files on branch $branch.
 - When and only when ready, write final readiness marker exactly: $completed
 - If blocked or tests fail, write: $failed: reason

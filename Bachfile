@@ -62,13 +62,11 @@ shell "install-bats" {
 shell "commit-msg" {
   description = "Validate a semantic commit message"
   command     = ["sh", ".githooks/commit-msg", var.commit_msg_file]
-  inputs      = [".githooks/commit-msg"]
 }
 
 shell "install-git-hooks" {
   description = "Configure Git to use tracked hooks"
-  command     = ["git", "config", "core.hooksPath", ".githooks"]
-  inputs      = [".githooks/commit-msg"]
+  command     = ["sh", "scripts/install-git-hooks.sh"]
 }
 
 shell "docs-generate" {

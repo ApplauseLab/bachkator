@@ -9,31 +9,31 @@ The public graph uses agent-role names: `feature-agent-1`, `feature-agent-2`, `m
 List the agent graph:
 
 ```sh
-go run ./cmd/bach -f examples/plan-agents/Bachfile list
+go run ./cmd/bach --file examples/plan-agents/Bachfile list
 ```
 
 Preview the delivery program without launching agents:
 
 ```sh
-go run ./cmd/bach -f examples/plan-agents/Bachfile --dry-run run pipeline/delivery_program
+go run ./cmd/bach --file examples/plan-agents/Bachfile run --dry-run pipeline/delivery_program
 ```
 
 Run the default delivery program:
 
 ```sh
-go run ./cmd/bach -f examples/plan-agents/Bachfile run pipeline/delivery_program
+go run ./cmd/bach --file examples/plan-agents/Bachfile run pipeline/delivery_program
 ```
 
 Run all feature agents without merging:
 
 ```sh
-go run ./cmd/bach -f examples/plan-agents/Bachfile run build-features
+go run ./cmd/bach --file examples/plan-agents/Bachfile run build-features
 ```
 
 Preview one merge lane:
 
 ```sh
-go run ./cmd/bach -f examples/plan-agents/Bachfile --dry-run run pipeline/core-merge-lane
+go run ./cmd/bach --file examples/plan-agents/Bachfile run --dry-run pipeline/core-merge-lane
 ```
 
 ## Agent Topology
@@ -133,7 +133,7 @@ Dry-run prints the agent graph without calling `opencode`:
 [shell/core-feature-swarm] aggregate
 [shell/feature-agent-2] sh examples/plan-agents/scripts/run-plan-agent.sh 2 ordered pipelines shell/plan-2-acceptance
 ...
-[shell/final-regression] go run ./cmd/bach -f examples/plan-agents/Bachfile.verification run pipeline/all-plan-tests
+[shell/final-regression] go run ./cmd/bach --file examples/plan-agents/Bachfile.verification run pipeline/all-plan-tests
 ```
 
 The exact order inside a feature swarm may vary because those agents are ready at the same time.
@@ -176,13 +176,13 @@ resumes the same OpenCode session through `run-opencode-session.sh`.
 Dry-run it first:
 
 ```sh
-go run ./cmd/bach -f examples/plan-agents/Bachfile --dry-run run shell/long-running-agent-loop
+go run ./cmd/bach --file examples/plan-agents/Bachfile run --dry-run shell/long-running-agent-loop
 ```
 
 Real execution requires `-yes`, a clean worktree preflight, and an authenticated `opencode` binary:
 
 ```sh
-go run ./cmd/bach -f examples/plan-agents/Bachfile -yes run shell/long-running-agent-loop
+go run ./cmd/bach --file examples/plan-agents/Bachfile run --yes shell/long-running-agent-loop
 ```
 
 The prompt tells the agent to repeat a safe loop: inspect status, run `bach affected`, make one
@@ -303,7 +303,7 @@ Final regression fails:
 `shell/final-regression` fails because it runs:
 
 ```sh
-go run ./cmd/bach -f examples/plan-agents/Bachfile.verification run pipeline/all-plan-tests
+go run ./cmd/bach --file examples/plan-agents/Bachfile.verification run pipeline/all-plan-tests
 ```
 
 For the root repository, also run:

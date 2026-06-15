@@ -13,8 +13,8 @@ sh scripts/agents/run-merge-agent.sh \
   --log-dir ".bach/architecture-merge-runs" \
   --checkpoint ".bach/opencode-sessions/architecture-merge-agent-$agent_number.checkpoint" \
   --prompt-file ".bach/opencode-sessions/architecture-merge-agent-$agent_number.prompt.md" \
-  --verification "go run ./cmd/bach -f Bachfile.architecture-migration.verification pipeline/all-phase-tests as far as the current phase structure allows" \
-  --full-test "go run ./cmd/bach shell/test" \
+  --verification "go run ./cmd/bach --file Bachfile.architecture-migration.verification run pipeline/all-phase-tests as far as the current phase structure allows" \
+  --full-test "go run ./cmd/bach run shell/test" \
   --completed-marker "$completed" \
   --failed-marker "$failed" \
   --extra-rule "Verification file: Bachfile.architecture-migration.verification." \

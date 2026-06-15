@@ -33,10 +33,10 @@ Rules:
 - Leave this main checkout untouched.
 - This invocation may resume an OpenCode session. Inspect the checkpoint file and branch/worktree state before editing.
 - Update the checkpoint file after each milestone: worktree ready, design inspected, edits complete, focused checks selected, focused checks passed, full test passed, committed, blocked, or complete.
-- Start with: go run ./cmd/bach -list
+- Start with: go run ./cmd/bach list
 - Before expensive work, run a dry-run for the smallest relevant target when one exists.
 - After edits, run: go run ./cmd/bach affected
-- Run focused tests repeatedly, then run: go run ./cmd/bach shell/test
+- Run focused tests repeatedly, then run: go run ./cmd/bach run shell/test
 - Commit only intended files on branch $branch.
 - When and only when ready, write final readiness marker exactly: $completed
 - If blocked or tests fail, write: $failed: reason

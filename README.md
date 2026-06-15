@@ -51,6 +51,16 @@ Or build from source:
 go run ./cmd/bach run shell/build
 ```
 
+Contributor setup:
+
+```sh
+go run ./cmd/bach run --dry-run shell/install-git-hooks
+go run ./cmd/bach run shell/install-git-hooks
+```
+
+Commits in this repository use semantic subject lines such as
+`feat(cli): add dry-run output` or `docs: update agent workflow`.
+
 ## 🧱 Bachfile in one screen
 
 Or run agentic loops: [examples/plan-agents](https://github.com/ApplauseLab/bachkator/tree/main/examples/plan-agents).

@@ -17,9 +17,9 @@
 
 ## Verification
 
-- Use `go run ./cmd/bach -f examples/opencode-provider/Bachfile list` to verify the Bachfile loads.
-- Use `go run ./cmd/bach -f examples/opencode-provider/Bachfile --dry-run run agent/print_environment` to inspect the basic provider invocation without launching OpenCode.
-- Use `go run ./cmd/bach -f examples/opencode-provider/Bachfile --dry-run run agent/resume_session` to inspect the policy/improvement resume flow without launching OpenCode.
+- Use `go run ./cmd/bach --file examples/opencode-provider/Bachfile list` to verify the Bachfile loads.
+- Use `go run ./cmd/bach --file examples/opencode-provider/Bachfile run --dry-run agent/print_environment` to inspect the basic provider invocation without launching OpenCode.
+- Use `go run ./cmd/bach --file examples/opencode-provider/Bachfile run --dry-run agent/resume_session` to inspect the policy/improvement resume flow without launching OpenCode.
 
 ## Child DOX Index
 

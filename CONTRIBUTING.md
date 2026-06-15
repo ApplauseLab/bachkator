@@ -56,7 +56,9 @@ go run ./cmd/bach run shell/install-git-hooks
 ```
 
 The hook is a `commit-msg` hook because Git does not expose the final commit
-message to `pre-commit`. To validate a message file manually:
+message to `pre-commit`. The install target configures the repo-local
+`core.hooksPath` and refuses to replace existing custom local hooks. To validate
+a message file manually:
 
 ```sh
 go run ./cmd/bach --var commit_msg_file=/path/to/message run shell/commit-msg
