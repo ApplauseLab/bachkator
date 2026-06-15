@@ -1866,10 +1866,12 @@ factory "delivery" {
     manual {}
 
     provider "github_issues" {
-      command       = ["bach-trigger-fixture"]
+      command       = ["bach-github-issue-trigger"]
       poll_interval = "5m"
       config = {
-        items_path = ".bach/fixtures/trigger-items.json"
+        repo      = "example/repo"
+        token_env = "GITHUB_TOKEN"
+        labels    = "factory:ship"
       }
 
       route {
@@ -1898,6 +1900,20 @@ Provider trigger fields:
 - `poll_interval`: optional duration string; defaults to `5m` and is clamped to at least `1s`.
 - `config`: optional map of string keys to string values passed to the provider during handshake and poll.
 - `route { label = "...", workflow = "..." }`: optional routing rule. Items with the matching label are routed to the named workflow. When a Factory has multiple workflows, at least one route is required; with a single workflow, omitted routes default to that workflow.
+
+The `bach-github-issue-trigger` provider reads GitHub Issues through the trigger provider protocol. It accepts these `config` keys:
+
+- `repo`: required GitHub repository in `owner/name` form.
+- `token_env`: optional environment variable name containing a GitHub token; defaults to `GITHUB_TOKEN`. The token value must stay out of the Bachfile.
+- `api_url`: optional GitHub API base URL; defaults to `https://api.github.com`.
+- `labels`: optional comma-separated GitHub label filter passed to the Issues API.
+- `state`: optional issue state, one of `open`, `closed`, or `all`; defaults to `open`.
+- `since`: optional RFC3339 timestamp used as the initial cursor when no Bach cursor exists.
+- `per_page`: optional GitHub page size from `1` to `100`; defaults to `100`.
+- `max_pages`: optional positive page limit per poll; defaults to `5`.
+- `priority_label_prefix`: optional label prefix for Work Item priority extraction; defaults to `priority:`.
+
+GitHub Issue labels are preserved as Work Item labels for route matching. Pull requests returned by the GitHub Issues API are ignored. The provider advances its cursor from GitHub `updated_at` timestamps and treats `priority:critical`, `priority:urgent`, `priority:high`, `priority:normal`, and `priority:low` labels as Bach priorities.
 
 Validation rules:
 
