@@ -163,6 +163,31 @@ func TestTriggerPollerNackOnIntakeError(t *testing.T) {
 	}
 }
 
+func TestTriggerEnvironmentDoesNotIncludeDefaultGitHubToken(t *testing.T) {
+	t.Setenv("PATH", "/bin")
+	t.Setenv("GITHUB_TOKEN", "secret-token")
+
+	env := triggerEnvironment(nil)
+
+	if !hasEnvValue(env, "PATH=/bin") {
+		t.Fatalf("env missing PATH: %v", env)
+	}
+	if hasEnvValue(env, "GITHUB_TOKEN=secret-token") {
+		t.Fatalf("env included implicit GITHUB_TOKEN: %v", env)
+	}
+}
+
+func TestTriggerEnvironmentIncludesConfiguredTokenEnv(t *testing.T) {
+	t.Setenv("PATH", "/bin")
+	t.Setenv("BACH_TEST_GITHUB_TOKEN", "secret-token")
+
+	env := triggerEnvironment(map[string]string{"token_env": "BACH_TEST_GITHUB_TOKEN"})
+
+	if !hasEnvValue(env, "BACH_TEST_GITHUB_TOKEN=secret-token") {
+		t.Fatalf("env missing configured token: %v", env)
+	}
+}
+
 type fakeTriggerHandler struct {
 	mu     sync.Mutex
 	result triggerprotocol.PollResult
@@ -262,4 +287,13 @@ func newTestPoller(
 		wg.Wait()
 	}
 	return poller, handler, cleanup
+}
+
+func hasEnvValue(env []string, want string) bool {
+	for _, value := range env {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

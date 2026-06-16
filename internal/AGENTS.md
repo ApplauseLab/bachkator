@@ -14,6 +14,7 @@
 - `cli`: Cobra command adapters and public CLI contract presentation.
 - `config`: Bachfile loading, decoding, validation, and config-time references.
 - `dag`, `graph`, `model`, and `target`: target model, dependency graph, graph plugins, and target-kind registration behavior.
+- `githubissuetrigger`: GitHub Issues Trigger Provider implementation.
 - `evidence`: trusted local evidence path handling, private artifact writes, and Agent Target workspace path resolution.
 - `factory`: Factory Work Item service logic, manual queue validation, intake evidence creation, and queue-facing DTOs.
 - `factorydaemon`: Factory daemon leases, queue polling, Work Item phase orchestration, and workflow execution.
@@ -67,6 +68,7 @@
 - `internal/factorydaemon/AGENTS.md`: Factory daemon leases, polling, claims, and workflow phase orchestration.
 - `internal/git/AGENTS.md`: git evidence helpers.
 - `internal/graph/AGENTS.md`: affected-target, explain, provenance, and risk graph analysis.
+- `internal/githubissuetrigger/AGENTS.md`: GitHub Issues Trigger Provider implementation.
 - `internal/model/AGENTS.md`: shared domain model and target address semantics.
 - `internal/plan/AGENTS.md`: Markdown Plan parsing, validation, hashing, graph construction, and pure status derivation.
 - `internal/planbatch/AGENTS.md`: multi-Plan batch execution and review-queue orchestration.

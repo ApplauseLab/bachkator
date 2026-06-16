@@ -11,6 +11,7 @@
 - Use Backend client methods for Factory state; do not query private State Store tables directly.
 - Run executable work through existing Agent Target, Plan execution, and runner paths instead of creating a parallel execution universe.
 - Trigger provider polling runs inside `bach factory start`; there is no standalone trigger poll command.
+- Trigger provider subprocesses receive only `PATH`, temp directory variables, and the env variable named by `config.token_env` when present.
 - Provider trigger failures are logged and nacked; they do not fail queued or active Work Items.
 - Release the daemon lease on shutdown using a fresh timeout context so SIGINT/SIGTERM teardown is not blocked by the canceled signal context.
 - Expose tunable queue poll, lease renewal, and lease TTL intervals through the CLI adapter; defaults are 5s poll, 10s renew, 30s TTL.

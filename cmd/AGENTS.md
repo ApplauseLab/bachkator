@@ -9,6 +9,7 @@
 - `cmd/bach`: main Bach CLI executable.
 - `cmd/bach-docs-gen`: reference documentation generator invoked by the `shell/docs-generate` Bach target.
 - `cmd/bach-file-lines`: internal Go file length checker for architecture hygiene.
+- `cmd/bach-github-issue-trigger`: GitHub Issues Trigger Provider executable.
 - `cmd/bach-lint-cap`: internal lint-report capping helper invoked by the `shell/lint` Bach target.
 - Command wiring and production dependency assembly belong in `internal/app` and `internal/cli`, not in executable packages.
 

@@ -173,8 +173,13 @@ factory "delivery" {
     manual {}
 
     provider "github_issues" {
-      command       = ["bach-trigger-fixture"]
+      command       = ["bach-github-issue-trigger"]
       poll_interval = "5m"
+      config = {
+        repo      = "ApplauseLab/bachkator"
+        token_env = "GITHUB_TOKEN"
+        labels    = "factory:ship"
+      }
 
       route {
         label    = "factory:ship"
