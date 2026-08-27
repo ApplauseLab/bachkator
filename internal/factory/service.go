@@ -116,6 +116,14 @@ type Queue interface {
 	) (WorkItem, bool, error)
 	Get(ctx context.Context, factory string, id string) (WorkItem, bool, error)
 	List(ctx context.Context, query WorkItemQuery) ([]WorkItem, error)
+	Fail(
+		ctx context.Context,
+		factory string,
+		id string,
+		phase string,
+		message string,
+		failedAt time.Time,
+	) (WorkItem, bool, error)
 	Cancel(
 		ctx context.Context,
 		factory string,

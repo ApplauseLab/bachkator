@@ -32,7 +32,12 @@ func checkoutFixture(t *testing.T) (root, base string) {
 	return root, base
 }
 
-func snapshotValidate(t *testing.T, ctx context.Context, root string, before projectCheckoutState) error {
+func snapshotValidate(
+	t *testing.T,
+	ctx context.Context,
+	root string,
+	before projectCheckoutState,
+) error {
 	t.Helper()
 	snapshot := projectCheckoutState{
 		Branch: before.Branch,

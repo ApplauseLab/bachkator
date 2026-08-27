@@ -55,6 +55,7 @@ type Dependencies struct {
 	FactoryList     FactoryListFunc
 	FactoryInspect  FactoryInspectFunc
 	FactoryCancel   FactoryCancelFunc
+	FactoryReject   FactoryRejectFunc
 	FactoryApprove  FactoryApproveFunc
 	FactoryStart    FactoryStartFunc
 	FactoryStatus   FactoryStatusFunc

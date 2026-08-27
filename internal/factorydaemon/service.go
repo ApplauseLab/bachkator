@@ -211,7 +211,12 @@ func (s Service) processOne(ctx context.Context, opts StartOptions) error {
 		}
 	}
 	if workflow.Implement[0].RequiresApproval != nil && *workflow.Implement[0].RequiresApproval {
-		if err := s.ensureImplementApproval(ctx, item, attemptID, config.FactoryPhaseImplement); err != nil {
+		if err := s.ensureImplementApproval(
+			ctx,
+			item,
+			attemptID,
+			config.FactoryPhaseImplement,
+		); err != nil {
 			if errors.Is(err, bacherr.ErrWaitingApproval) {
 				return nil
 			}
@@ -232,7 +237,14 @@ func (s Service) processOne(ctx context.Context, opts StartOptions) error {
 			}
 		}
 		if merge.AgentTemplate != "" {
-			if err := s.runMergeAgentPhase(ctx, opts, item, attemptID, workflow, merge); err != nil {
+			if err := s.runMergeAgentPhase(
+				ctx,
+				opts,
+				item,
+				attemptID,
+				workflow,
+				merge,
+			); err != nil {
 				return s.failItem(ctx, item, config.FactoryPhaseMerge, err)
 			}
 		} else if err := s.runTargetPhase(

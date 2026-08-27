@@ -1,11 +1,11 @@
 package target
 
 import (
-	"os"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"

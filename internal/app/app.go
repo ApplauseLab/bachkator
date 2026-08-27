@@ -60,6 +60,7 @@ func (a App) Execute(ctx context.Context, args []string, stdout io.Writer, stder
 		FactoryList:     a.listFactory,
 		FactoryInspect:  a.inspectFactory,
 		FactoryCancel:   a.cancelFactory,
+		FactoryReject:   a.rejectFactory,
 		FactoryApprove:  a.approveFactory,
 		FactoryStart:    a.startFactory,
 		FactoryStatus:   a.statusFactory,

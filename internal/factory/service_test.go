@@ -115,10 +115,38 @@ type captureQueue struct {
 	attempt     WorkItemAttempt
 	event       WorkItemEvent
 	dedupeEvent WorkItemEvent
+	failed      WorkItem
+	failMessage string
+	failCalls   int
+}
+
+func (q *captureQueue) Fail(
+	ctx context.Context,
+	factory string,
+	id string,
+	phase string,
+	message string,
+	failedAt time.Time,
+) (WorkItem, bool, error) {
+	q.failCalls++
+	q.failed = WorkItem{ID: id, Lifecycle: "failed", CurrentPhase: phase}
+	q.failMessage = message
+	return q.failed, true, nil
 }
 
 type dedupeQueue struct {
 	existing WorkItem
+}
+
+func (q *dedupeQueue) Fail(
+	ctx context.Context,
+	factory string,
+	id string,
+	phase string,
+	message string,
+	failedAt time.Time,
+) (WorkItem, bool, error) {
+	return WorkItem{ID: id, Lifecycle: "failed"}, true, nil
 }
 
 func (q *dedupeQueue) Enqueue(
@@ -193,7 +221,10 @@ func (q *captureQueue) UpdatePending(
 	return item, true, nil
 }
 
-func (q *captureQueue) Get(_ context.Context, _, _ string) (WorkItem, bool, error) {
+func (q *captureQueue) Get(_ context.Context, factory, id string) (WorkItem, bool, error) {
+	if factory == q.item.Factory && id == q.item.ID {
+		return q.item, true, nil
+	}
 	return WorkItem{}, false, nil
 }
 

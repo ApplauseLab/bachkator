@@ -71,6 +71,21 @@ func (q BackendQueue) List(ctx context.Context, query WorkItemQuery) ([]WorkItem
 	return result, nil
 }
 
+func (q BackendQueue) Fail(
+	ctx context.Context,
+	factory string,
+	id string,
+	phase string,
+	message string,
+	failedAt time.Time,
+) (WorkItem, bool, error) {
+	failed, ok, err := q.Client.FailWorkItem(ctx, factory, id, phase, message, failedAt)
+	if err != nil {
+		return WorkItem{}, ok, err
+	}
+	return workItemFromBackend(failed), ok, nil
+}
+
 func (q BackendQueue) Cancel(
 	ctx context.Context,
 	factory string,

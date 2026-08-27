@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -86,6 +87,20 @@ func newFactoryCommand(
 	}
 	bindFactoryApproveFlags(approveCmd, opts)
 	cmd.AddCommand(approveCmd)
+
+	rejectCmd := &cobra.Command{
+		Use:   "reject <factory> <work-item-id>",
+		Short: "Reject a gated Factory phase with feedback",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runFactoryReject(
+				makeFactoryContext(cmd.Context(), deps, opts, stdout, stderr),
+				args,
+			)
+		},
+	}
+	bindFactoryRejectFlags(rejectCmd, opts)
+	cmd.AddCommand(rejectCmd)
 
 	startCmd := &cobra.Command{
 		Use:   "start <factory>",
@@ -321,6 +336,82 @@ func runFactoryApprove(ctx commandContext, args []string) error {
 		result.Approval.Workflow,
 		result.Approval.Phase,
 		result.Approval.ID,
+	)
+	return err
+}
+
+type factoryRejectView struct {
+	Rejected   bool   `json:"rejected"`
+	Exhausted  bool   `json:"exhausted"`
+	RetryID    string `json:"retry_id,omitempty"`
+	RetryCount int    `json:"retry_count"`
+	Reason     string `json:"reason"`
+}
+
+func runFactoryReject(ctx commandContext, args []string) error {
+	if ctx.deps.FactoryReject == nil {
+		return fmt.Errorf("factory reject dependency is not configured")
+	}
+	if len(args) < 2 {
+		return UsageErrorf(
+			"usage: bach factory reject <factory> <work-item-id> --phase <phase> --reason <feedback>",
+		)
+	}
+	if len(args) != 2 {
+		return fmt.Errorf("unexpected factory reject argument %q", args[2])
+	}
+	factoryName := args[0]
+	workItemID := args[1]
+	if ctx.opts.factoryPhase == "" {
+		return UsageErrorf("--phase is required")
+	}
+	if ctx.opts.factoryReason == "" {
+		return UsageErrorf("--reason is required: write what should change")
+	}
+	maxRejections := 0
+	if ctx.opts.factoryMaxRejections != "" {
+		parsed, perr := strconv.Atoi(ctx.opts.factoryMaxRejections)
+		if perr != nil {
+			return UsageErrorf("--max-rejections must be an integer")
+		}
+		maxRejections = parsed
+	}
+	opts := FactoryRejectOptions{
+		Phase:         ctx.opts.factoryPhase,
+		Reason:        ctx.opts.factoryReason,
+		MaxRejections: maxRejections,
+	}
+	result, err := ctx.deps.FactoryReject(ctx.context, ctx.project, factoryName, workItemID, opts)
+	if err != nil {
+		return err
+	}
+	view := factoryRejectView{
+		Rejected:   result.Rejected,
+		Exhausted:  result.Exhausted,
+		RetryID:    result.RetryID,
+		RetryCount: result.RetryCount,
+		Reason:     result.Reason,
+	}
+	if ctx.opts.json {
+		return writeFactoryJSON(ctx.stdout, view)
+	}
+	if result.Exhausted {
+		_, err = fmt.Fprintf(
+			ctx.stdout,
+			"rejections exhausted (%d) for %s; last reason: %s\n",
+			result.RetryCount,
+			workItemID,
+			result.Reason,
+		)
+		return err
+	}
+	_, err = fmt.Fprintf(
+		ctx.stdout,
+		"rejected %s factory=%s phase=%s retry=%s feedback recorded\n",
+		workItemID,
+		factoryName,
+		opts.Phase,
+		result.RetryID,
 	)
 	return err
 }

@@ -111,6 +111,31 @@ func (a App) cancelFactory(
 	})
 }
 
+func (a App) rejectFactory(
+	ctx context.Context,
+	project *cli.Project,
+	factoryName string,
+	id string,
+	opts cli.FactoryRejectOptions,
+) (factorypkg.RejectResult, error) {
+	configProject, factoryConfig, _, err := a.resolveFactoryWorkflow(
+		project,
+		factoryName,
+		"",
+		false,
+	)
+	if err != nil {
+		return factorypkg.RejectResult{}, err
+	}
+	return factoryService(configProject).Reject(ctx, factorypkg.RejectOptions{
+		Factory:       factoryConfig.Name,
+		ID:            id,
+		Phase:         opts.Phase,
+		Reason:        opts.Reason,
+		MaxRejections: opts.MaxRejections,
+	})
+}
+
 func (a App) approveFactory(
 	ctx context.Context,
 	project *cli.Project,

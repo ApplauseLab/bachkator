@@ -30,6 +30,20 @@ type FactoryCancelOptions struct {
 	Reason string
 }
 
+type FactoryRejectOptions struct {
+	Phase         string
+	Reason        string
+	MaxRejections int
+}
+
+type FactoryRejectFunc func(
+	context.Context,
+	*Project,
+	string,
+	string,
+	FactoryRejectOptions,
+) (factorypkg.RejectResult, error)
+
 type FactoryApproveOptions struct {
 	Phase  string
 	Reason string

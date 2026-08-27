@@ -357,7 +357,12 @@ func validateFactoryWorkflowReferences(
 				project,
 				merge.AgentTemplate,
 			); err != nil {
-				return fmt.Errorf("factory %q workflow %q merge: %w", factoryName, workflow.Name, err)
+				return fmt.Errorf(
+					"factory %q workflow %q merge: %w",
+					factoryName,
+					workflow.Name,
+					err,
+				)
 			}
 		} else if err := validateFactoryTargetRef(project, merge.Target); err != nil {
 			return fmt.Errorf("factory %q workflow %q merge: %w", factoryName, workflow.Name, err)

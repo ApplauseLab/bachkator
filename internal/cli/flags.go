@@ -46,6 +46,7 @@ type options struct {
 	factoryDedupeKey     string
 	factoryPlan          string
 	factoryReason        string
+	factoryMaxRejections string
 	factoryPhase         string
 	planParallelism      int
 	planStopOn           string
@@ -160,6 +161,14 @@ func bindFactoryCancelFlags(cmd *cobra.Command, opts *options) {
 func bindFactoryApproveFlags(cmd *cobra.Command, opts *options) {
 	cmd.Flags().StringVar(&opts.factoryPhase, "phase", "", "phase to approve")
 	cmd.Flags().StringVar(&opts.factoryReason, "reason", "", "approval reason")
+}
+
+func bindFactoryRejectFlags(cmd *cobra.Command, opts *options) {
+	cmd.Flags().StringVar(&opts.factoryPhase, "phase", "", "phase to reject")
+	cmd.Flags().
+		StringVar(&opts.factoryReason, "reason", "", "rejection feedback: what should change")
+	cmd.Flags().
+		StringVar(&opts.factoryMaxRejections, "max-rejections", "", "override remaining rejection budget")
 }
 
 func bindFactoryStartFlags(cmd *cobra.Command, opts *options) {

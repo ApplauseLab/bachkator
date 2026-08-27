@@ -1,9 +1,9 @@
 package factorydaemon
 
 import (
-	"strconv"
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -255,14 +255,14 @@ func (p *approvalPoller) rejectItem(
 	}); err != nil {
 		return err
 	}
-		_, _, _ = p.service.Backend.Factory.FailWorkItem(
-			ctx,
-			item.Factory,
-			item.ID,
-			item.CurrentPhase,
-			fmt.Sprintf("rejected: %s (retry %d enqueued)", reason, count+1),
-			clock.UTC(p.service.Now),
-		)
+	_, _, _ = p.service.Backend.Factory.FailWorkItem(
+		ctx,
+		item.Factory,
+		item.ID,
+		item.CurrentPhase,
+		fmt.Sprintf("rejected: %s (retry %d enqueued)", reason, count+1),
+		clock.UTC(p.service.Now),
+	)
 	p.logf("work item %s rejected; retry %d enqueued with feedback", item.ID, count+1)
 	return nil
 }
