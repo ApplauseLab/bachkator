@@ -83,3 +83,20 @@ Recording semantics:
   a stale-approval error.
 - Recorded approvals store the approver reported by the provider with
   `approver_source = "provider"` plus optional reason and metadata.
+
+## Rejected records
+
+Records carry a `rejected` flag. Providers emit it when the latest human
+decision on the tracked artifact is a rejection - for example a `/deny
+<reason>` comment or a changes-requested review. Rejected records are applied
+to waiting Work Items at the named phase and drive the retry loop:
+
+- The first three rejections re-enqueue the item at the plan phase with the
+  rejection reason appended to the item body as reviewer feedback; planners
+  and implementers must address every point.
+- The fourth rejection fails the item with `rejections exhausted` and the last
+  reason attached.
+- Rejections are idempotent and redelivery safe, like approvals.
+
+The GitHub provider maps `/deny <reason>` comments and changes-requested
+reviews to rejected records; the reason text becomes the reviewer feedback.
