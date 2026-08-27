@@ -1922,8 +1922,8 @@ Validation rules:
 - A Factory must declare at least one workflow.
 - Workflow names must be unique within a Factory.
 - Daemon-executable workflows require exactly one `plan` block and exactly one `implement` block.
-- `merge`, named `deploy`, and named `verify` phases are optional. Each phase block accepts singular `target`.
-- `requires_approval` is accepted only on `plan` and `deploy` blocks. `implement`, `merge`, and `verify` reject the field.
+- `merge`, named `deploy`, and named `verify` phases are optional. Merge accepts either singular `target` or `agent_template` (an agent-driven merge lane); deploy and verify accept singular `target`.
+- `requires_approval` is accepted on `plan`, `implement`, `merge`, and `deploy` blocks. `verify` rejects the field.
 - A Factory may declare at most one `triggers` block, at most one `manual` trigger block, and any number of named `provider` trigger blocks.
 - Provider trigger names must be unique within a Factory and must be simple identifiers.
 - Provider triggers require a non-empty `command` array.
@@ -2014,7 +2014,8 @@ Current lifecycle values are:
 - `failed`: a workflow phase failed; the Work Item records the failed phase and message.
 - `cancelled`: manually cancelled before execution.
 
-Deferred Factory behavior includes retries, review queues, and replan loops.
+Rejection-driven retries are supported for provider-recorded rejections (see
+approval providers); review queues and replan loops remain deferred.
 
 ## Complete example: agent-driven todo factory
 
