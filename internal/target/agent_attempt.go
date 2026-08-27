@@ -148,12 +148,14 @@ func implementationReportContract(reportPath string, body model.AgentSpec) strin
 		providerCommand = []byte(`[]`)
 	}
 	if body.Mode == "plan" {
-		return fmt.Sprintf(`## Required Planning Output
+		return `## Required Planning Output
 
-You are in planning mode. Write the plan Markdown file to $BACH_PLAN_OUTPUT_PATH (%s).
-The plan file must be valid Bachkator Plan Markdown with optional YAML frontmatter.
-No Agent Target completion report is required for planning mode.
-`, body.Plan)
+You are in planning mode. Write the plan Markdown file to the absolute path in
+$BACH_PLAN_OUTPUT_PATH. That path is inside your agent workspace — never write
+any file outside your workspace. The plan file must be valid Bachkator Plan
+Markdown with optional YAML frontmatter. No Agent Target completion report is
+required for planning mode.
+`
 	}
 	return fmt.Sprintf(`## Required Implementation Report
 

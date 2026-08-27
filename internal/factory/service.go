@@ -37,6 +37,7 @@ type WorkItem struct {
 	Priority           model.Priority
 	Labels             []string
 	SourceType         string
+	SourceID           string
 	DedupeKey          string
 	SubmittedPlanPath  string
 	SubmittedPlanHash  string
@@ -181,6 +182,7 @@ type ApproveOptions struct {
 	Reason         string
 	Approver       string
 	ApproverSource string
+	Metadata       map[string]string
 }
 
 type ApproveResult struct {

@@ -2,7 +2,7 @@
 
 Status: in progress
 
-This design note covers the plan-first foundation for Factory, Backend, trigger-provider, and managed-control-plane work.
+See `docs/designs/dark-software-factory-master-plan.md` for the broader Factory, Backend, trigger-provider, and Atelier integration roadmap that builds on this plan-first foundation.
 
 Accepted direction: `docs/adr/0020-plan-execution-unit-and-backend-evidence.md` locks one accepted Plan as one implementer unit and stores Bach-owned Plan ledger/evidence records in the Backend database.
 
@@ -65,7 +65,7 @@ bach plan status plans/day-2026-06-13/*.md
 bach plan implement --yes plans/phase-14-checkout.md
 ```
 
-Batch `plan implement` over a ready frontier is future Phase 7 behavior; Phase 5 executes exactly one Plan per invocation.
+Batch `plan implement` over a ready frontier is implemented: pass multiple Plan files and use `--parallelism` and `--stop-on` to control concurrency and failure behavior. Single-file `plan implement` still executes exactly one Plan per invocation.
 
 Graph node identity is the Plan ID:
 
@@ -216,7 +216,7 @@ bach plan implement --yes plans/phase-14-checkout.md
 
 `bach plan status` is the first slice. It parses Plans, builds a selected Plan DAG, computes Plan hashes, reads Backend ledgers, and reports `ready`, `planned`, `blocked`, `implemented`, `stale`, or `invalid_ledger`.
 
-`bach plan implement` materializes one implementer Agent Target for one selected Plan and writes Plan ledger/evidence records to the Backend after validation passes. Batch selection, `--ready`, and `--stop-on` are future Phase 7 behavior.
+`bach plan implement` materializes one implementer Agent Target for one selected Plan and writes Plan ledger/evidence records to the Backend after validation passes. Batch selection with multiple Plan files, `--parallelism`, and `--stop-on` are implemented. A dedicated `--ready` flag is not implemented; select Plans explicitly on the command line.
 
 ## Execution Loop
 
@@ -226,7 +226,7 @@ build combined Plan DAG
 load Backend ledgers and evidence
 skip already-valid Plans
 while ready Plans exist:
-  start up to -j Plan implementer agents
+  start up to --parallelism Plan implementer agents
   for each completed Plan:
     verify implementation commit
     run required targets
@@ -237,11 +237,10 @@ stop when all possible work completed or a stop condition fires
 write batch review queue through Backend evidence records
 ```
 
-Stop conditions should be explicit because overnight execution has different risk tolerance from an interactive run:
+Stop conditions are explicit because overnight execution has different risk tolerance from an interactive run:
 
-- `--stop-on blocker`: continue through ordinary failures, but stop if a policy marks a blocker or dependency root fails.
-- `--stop-on failure`: stop starting new work after any failed Plan.
-- `--best-effort`: keep executing independent Plans even when some branches fail.
+- `--stop-on failure`: stop starting new work after any failed Plan. This is the default.
+- `--stop-on never`: keep executing independent ready Plans even when some branches fail.
 
 ## Morning Review Queue
 

@@ -152,6 +152,7 @@ func (s Service) ProviderIntake(
 		Priority:           priority,
 		Labels:             append([]string(nil), labels...),
 		SourceType:         opts.SourceType,
+		SourceID:           opts.SourceID,
 		DedupeKey:          dedupeKey,
 		IntakeEvidenceID:   evidenceID,
 		IntakeEvidenceURI:  intakeURI,

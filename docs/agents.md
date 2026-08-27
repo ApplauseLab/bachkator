@@ -6,11 +6,12 @@
 
 ## Ownership
 
+- `index.html`: human-readable landing page for the documentation tree.
 - `reference/`: source fragments for the generated Bach reference.
 - `reference.md`: generated output; do not edit directly.
 - `adr/`: architectural decisions and durable design rationale.
 - `schemas/`: JSON schemas for documented machine-readable contracts.
-- `agent-guide.md`: maintained agent-facing workflow guide aligned with current CLI behavior.
+- `agents.md`: generated or maintained agent-facing guide content mirrored from reference behavior.
 - `architecture/` and `designs/`: durable design notes that are less formal than ADRs.
 
 ## Local Contracts

@@ -23,7 +23,7 @@
     "plan_hash": { "type": "string" },
     "approved_at": { "type": "string", "format": "date-time" },
     "approver": { "type": "string" },
-    "approver_source": { "enum": ["git", "env", "os_user", "unknown"] },
+    "approver_source": { "enum": ["git", "env", "os_user", "provider", "unknown"] },
     "reason": { "type": "string" },
     "metadata": { "type": "object", "additionalProperties": { "type": "string" } }
   },

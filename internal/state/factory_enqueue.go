@@ -93,8 +93,9 @@ func (s *Store) UpdatePendingFactoryWorkItem(
 		`
 		UPDATE factory_work_items
 		SET title = ?, body = ?, body_hash = ?, priority = ?, labels = ?, metadata = ?,
-		    source_type = ?, dedupe_key = ?, submitted_plan_path = ?, submitted_plan_hash = ?,
-		    intake_evidence_id = ?, intake_evidence_uri = ?, intake_evidence_hash = ?, updated_at = ?
+		    source_type = ?, source_id = ?, dedupe_key = ?, submitted_plan_path = ?,
+		    submitted_plan_hash = ?, intake_evidence_id = ?, intake_evidence_uri = ?,
+		    intake_evidence_hash = ?, updated_at = ?
 		WHERE factory = ? AND id = ?
 	`,
 		item.Title,
@@ -106,6 +107,7 @@ func (s *Store) UpdatePendingFactoryWorkItem(
 			metadata,
 		),
 		item.SourceType,
+		item.SourceID,
 		item.DedupeKey,
 		item.SubmittedPlanPath,
 		item.SubmittedPlanHash,

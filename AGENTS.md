@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Bachkator is a local-first dark factory and build-system control plane for repositories where humans and coding agents need the same explicit, inspectable project operations and unattended delivery lanes. This root `AGENTS.md` is the project-wide DOX rail: it defines global workflow rules, repository-wide contracts, and the child context index that agents must follow before editing.
+Bachkator is a local-first build-system control plane for repositories where humans and coding agents need the same explicit, inspectable project operations. This root `AGENTS.md` is the project-wide DOX rail: it defines global workflow rules, repository-wide contracts, and the child context index that agents must follow before editing.
 
 ## Core Contract
 
@@ -75,7 +75,7 @@ go run ./cmd/bach reference plugins
 When a run fails, inspect Bach run history and logs:
 
 ```sh
-go run ./cmd/bach runs list
+go run ./cmd/bach runs
 ```
 
 Logs are under:
@@ -87,8 +87,6 @@ Logs are under:
 ## Current Targets
 
 - `agent/init_command_provider_scaffold`: run the phase 11 init-command provider scaffold agent.
-- `shell/commit-msg`: validate a commit message file against the semantic commit rule.
-- `shell/install-git-hooks`: configure Git to use tracked hooks from `.githooks/`.
 - `shell/test`: run the Go test suite.
 - `shell/lint`: run golangci-lint, parse Checkstyle output, and enforce zero lint issues.
 - `shell/file-lines`: enforce the Go file size budget with a 500-line default and a baseline for existing oversized files.
@@ -99,7 +97,6 @@ Logs are under:
 - `shell/docs-generate`: regenerate `docs/reference.md` from `docs/reference/*.md`.
 - `shell/build-release`: build macOS/Linux amd64/arm64 release archives.
 - `shell/github-release`: create a GitHub release with the release archives.
-- `shell/github-release-publish`: publish an already-built GitHub release without rebuilding archives.
 
 ## Release Rule
 
@@ -111,13 +108,10 @@ go run ./cmd/bach --var release_version=vX.Y.Z run shell/github-release
 ```
 
 The release target pins the GitHub tag to `$BACH_GIT_COMMIT` and uploads all multi-platform archives.
-The publish-only release target is for workflows that have already built and transferred archives before entering a write-permission publish phase.
 
 ## Repository-Wide Notes
 
 - Do not commit `.bach/`, `dist/`, or `.opencode-snitch-off`.
-- Use semantic commit messages in the form `type(scope): subject` or `type: subject`; allowed types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, and `revert`.
-- The semantic commit hook is `.githooks/commit-msg`; install it with `go run ./cmd/bach run shell/install-git-hooks` and validate message files with `go run ./cmd/bach --var commit_msg_file=/path/to/message run shell/commit-msg`. The install target refuses to replace an existing custom local hook path.
 - `shell/fmt` and `shell/lint` require a golangci-lint v2-compatible binary on `PATH`; `.golangci.yml` enables `gofmt`, `golines` at 100 columns, and `dupl` duplication checks.
 - Keep lint output bounded; the `shell/lint` target caps golangci-lint text and Checkstyle output to the first 10 total findings so run logs and artifacts stay readable.
 - Keep Go files at or below 500 lines. Existing larger files are listed in `docs/architecture/go-file-size-baseline.txt`; do not let baseline files grow, and split them during architecture work.
@@ -133,6 +127,8 @@ The publish-only release target is for workflows that have already built and tra
 ## Parallel Phase Work
 
 When orchestrating implementation phases in parallel, prefer a dedicated Bachfile such as `Bachfile.batch` over ad hoc shell scripts. Use a `pipeline` target for the sequential merge/test phase, and use normal `depends_on` fan-out for parallel implementation targets.
+
+`Bachfile.plans` owns the next planned implementation lane. Use it with `go run ./cmd/bach --file Bachfile.plans list` and dry-run `pipeline/next_plans` before starting phase agents from that file.
 
 For non-interactive OpenCode workers, use `opencode run <prompt>`. If the user explicitly approves broad worktree access, pass `--dangerously-skip-permissions`; otherwise agents may be blocked from reading or testing external worktrees.
 
@@ -159,7 +155,7 @@ If conflicts occur, preserve all existing target fields and runner behavior unle
 - `internal/config/config_types.go`: keep metadata fields, profiles, `quiet`, `lock`, `steps`, env blocks, and image fields together.
 - `internal/runner/runner.go`, `executor.go`, `scheduler.go`, and `logs.go`: preserve pipeline execution, profile/env layering, quiet/log-only streaming, target labels, and lock manager plumbing.
 - `internal/cli/flags.go`: avoid duplicate option fields or duplicate flag bindings when phases add CLI flags.
-- `docs/reference.md` and `docs/agent-guide.md`: merge documentation sections rather than choosing one side.
+- `docs/reference.md` and `docs/agents.md`: merge documentation sections rather than choosing one side.
 
 Avoid shell-local variables like `$out` inside Bach `shell` strings because Bach expands `$NAME` before `/bin/sh` runs. Prefer command pipelines that do not depend on shell-local variable expansion, or move complex logic into a checked-in script/Go test.
 
@@ -179,7 +175,6 @@ Avoid shell-local variables like `$out` inside Bach `shell` strings because Bach
 ## Child DOX Index
 
 - `cmd/AGENTS.md`: executable entry points and command-specific generation binaries.
-- `.github/AGENTS.md`: GitHub Actions workflows, local composite actions, issue forms, and pull request templates.
 - `internal/AGENTS.md`: internal Go packages, domain boundaries, and import-direction rules.
 - `docs/AGENTS.md`: documentation, reference fragments, ADRs, schemas, and agent-facing guides.
 - `examples/AGENTS.md`: example Bachfiles, plugins, and sample projects.
@@ -218,7 +213,7 @@ Avoid shell-local variables like `$out` inside Bach `shell` strings because Bach
 
 ## Formatting & Tooling
 - Use standard Go import organization.
-- Ensure code passes `bach run shell/lint` and configured linters.
+- Ensure code passes `bach lint` and configured linters.
 - Do not introduce non-standard style conventions without strong justification.
 
 ## Concurrency

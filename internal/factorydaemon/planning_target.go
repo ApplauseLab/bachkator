@@ -26,6 +26,12 @@ func (s Service) materializePlanningTarget(
 	targetName := "agent/factory." + item.ID + ".plan"
 	workspace := ".bach/agents/factory/" + item.ID + "/plan"
 	branch := "bach/factory/" + item.ID + "/plan"
+	workspaceAbs := filepath.Join(s.ConfigProject.Root, filepath.FromSlash(workspace))
+	// BACH_PLAN_OUTPUT_PATH must be absolute and inside the planner workspace.
+	// A project-relative value lets providers resolve it against BACH_PROJECT_ROOT
+	// (the main checkout), which the provider-hygiene check rightly fails.
+	planOutputPath := filepath.Join(workspaceAbs, filepath.FromSlash(planPath))
+
 	project.Targets[targetName] = &model.RunTarget{
 		Name: targetName,
 		Env: []string{
@@ -33,7 +39,7 @@ func (s Service) materializePlanningTarget(
 			"BACH_WORKFLOW_NAME=" + workflow.Name,
 			"BACH_WORK_ITEM_ID=" + item.ID,
 			"BACH_WORK_ITEM_TITLE=" + item.Title,
-			"BACH_PLAN_OUTPUT_PATH=" + planPath,
+			"BACH_PLAN_OUTPUT_PATH=" + planOutputPath,
 		},
 		SpecValue: model.TargetSpec{
 			Name: targetName,
@@ -58,8 +64,5 @@ func (s Service) materializePlanningTarget(
 			},
 		},
 	}
-	return targetName, filepath.Join(
-		s.ConfigProject.Root,
-		filepath.FromSlash(workspace),
-	), project, nil
+	return targetName, workspaceAbs, project, nil
 }

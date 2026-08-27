@@ -1,6 +1,7 @@
 package target
 
 import (
+	"os"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -148,11 +149,25 @@ func validateProjectCheckoutSnapshot(
 		)
 	}
 	if after.Head != before.Head {
-		return fmt.Errorf(
-			"provider changed main checkout HEAD: got %s want %s",
-			after.Head,
-			before.Head,
-		)
+		// BACH_CHECKOUT_GUARD=relaxed lets operators keep committing to main
+		// while an item implements: a fast-forward HEAD move is theirs, not
+		// the provider's. Anything else (non-fast-forward, branch switch) is
+		// still provider damage.
+		if os.Getenv("BACH_CHECKOUT_GUARD") != "relaxed" {
+			return fmt.Errorf(
+				"provider changed main checkout HEAD: got %s want %s",
+				after.Head,
+				before.Head,
+			)
+		}
+		if err := gitpkg.IsAncestor(ctx, root, before.Head, after.Head); err != nil {
+			return fmt.Errorf(
+				"provider moved main checkout HEAD (non-fast-forward): got %s want %s",
+				after.Head,
+				before.Head,
+			)
+		}
+		return nil
 	}
 	if after.Status != before.Status {
 		return fmt.Errorf("provider changed main checkout status: %s", after.Status)

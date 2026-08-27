@@ -17,10 +17,6 @@ var "bats_version" {
   default = "v1.12.0"
 }
 
-var "commit_msg_file" {
-  default = ""
-}
-
 # Example computed release/image tag:
 # var "image_tag" {
 #   default = "${git_short_sha()}${git_dirty_suffix()}"
@@ -57,16 +53,6 @@ shell "install-bats" {
     name = "curl"
   }]
   outputs = [".bach/tools/bats-core/bin/bats"]
-}
-
-shell "commit-msg" {
-  description = "Validate a semantic commit message"
-  command     = ["sh", ".githooks/commit-msg", var.commit_msg_file]
-}
-
-shell "install-git-hooks" {
-  description = "Configure Git to use tracked hooks"
-  command     = ["sh", "scripts/install-git-hooks.sh"]
 }
 
 shell "docs-generate" {
@@ -267,32 +253,5 @@ shell "github-release" {
     "Bachkator ${var.release_version}",
     "--generate-notes",
     "--latest",
-  ]
-}
-
-shell "github-release-publish" {
-  command = [
-    "gh",
-    "release",
-    "create",
-    var.release_version,
-    "dist/bachkator_darwin_amd64.tar.gz",
-    "dist/bachkator_darwin_arm64.tar.gz",
-    "dist/bachkator_linux_amd64.tar.gz",
-    "dist/bachkator_linux_arm64.tar.gz",
-    "--repo",
-    var.github_repo,
-    "--target",
-    "$BACH_GIT_COMMIT",
-    "--title",
-    "Bachkator ${var.release_version}",
-    "--generate-notes",
-    "--latest",
-  ]
-  inputs = [
-    "dist/bachkator_darwin_amd64.tar.gz",
-    "dist/bachkator_darwin_arm64.tar.gz",
-    "dist/bachkator_linux_amd64.tar.gz",
-    "dist/bachkator_linux_arm64.tar.gz",
   ]
 }

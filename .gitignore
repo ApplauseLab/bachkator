@@ -1,5 +1,6 @@
 .bach/
+.opencode-snitch-off
+.opencode/
+.plans_ignored
 dist/
 tools/
-.opencode-snitch-off
-.plans_ignored

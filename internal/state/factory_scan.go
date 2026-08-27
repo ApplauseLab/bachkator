@@ -9,7 +9,7 @@ import (
 func getFactoryWorkItemDB(db *sql.DB, factory string, id string) (FactoryWorkItem, error) {
 	item, err := scanFactoryWorkItem(db.QueryRow(`
 		SELECT id, factory, workflow, lifecycle, current_phase, title, body, body_hash,
-			priority, labels, source_type, dedupe_key, submitted_plan_path,
+			priority, labels, source_type, source_id, dedupe_key, submitted_plan_path,
 			submitted_plan_hash, intake_evidence_id, intake_evidence_uri,
 			intake_evidence_hash, metadata, created_at, updated_at, cancelled_at,
 			cancel_reason, claimed_by_daemon_id, claimed_at, claim_expires_at,
@@ -26,7 +26,7 @@ func getFactoryWorkItemDB(db *sql.DB, factory string, id string) (FactoryWorkIte
 func getFactoryWorkItemTx(tx *sql.Tx, factory string, id string) (FactoryWorkItem, error) {
 	item, err := scanFactoryWorkItem(tx.QueryRow(`
 		SELECT id, factory, workflow, lifecycle, current_phase, title, body, body_hash,
-			priority, labels, source_type, dedupe_key, submitted_plan_path,
+			priority, labels, source_type, source_id, dedupe_key, submitted_plan_path,
 			submitted_plan_hash, intake_evidence_id, intake_evidence_uri,
 			intake_evidence_hash, metadata, created_at, updated_at, cancelled_at,
 			cancel_reason, claimed_by_daemon_id, claimed_at, claim_expires_at,
@@ -47,7 +47,7 @@ func getFactoryWorkItemTxForUpdate(
 ) (FactoryWorkItem, bool, error) {
 	item, err := scanFactoryWorkItem(tx.QueryRow(`
 		SELECT id, factory, workflow, lifecycle, current_phase, title, body, body_hash,
-			priority, labels, source_type, dedupe_key, submitted_plan_path,
+			priority, labels, source_type, source_id, dedupe_key, submitted_plan_path,
 			submitted_plan_hash, intake_evidence_id, intake_evidence_uri,
 			intake_evidence_hash, metadata, created_at, updated_at, cancelled_at,
 			cancel_reason, claimed_by_daemon_id, claimed_at, claim_expires_at,
@@ -96,6 +96,7 @@ func scanFactoryWorkItem(row rowScanner) (FactoryWorkItem, error) {
 		&item.Priority,
 		&labels,
 		&item.SourceType,
+		&item.SourceID,
 		&item.DedupeKey,
 		&item.SubmittedPlanPath,
 		&item.SubmittedPlanHash,

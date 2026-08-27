@@ -65,6 +65,7 @@ func (s Service) Approve(ctx context.Context, opts ApproveOptions) (ApproveResul
 		Approver:       opts.Approver,
 		ApproverSource: opts.ApproverSource,
 		Reason:         opts.Reason,
+		Metadata:       cloneStringMap(opts.Metadata),
 	}
 	event := WorkItemEvent{
 		ID:         eventID,

@@ -1,0 +1,197 @@
+# vim: set ft=hcl :
+
+project "bachkator-plans" {
+  root    = "."
+  default = "pipeline.next_plans"
+
+  backend {
+    type    = "stdio"
+    command = ["bach", "backend", "sqlite"]
+    config = { path = ".bach/plans-state.db" }
+  }
+}
+
+provider "opencode" {
+  type    = "agent"
+  command = ["opencode", "run"]
+}
+
+provider "opencode_review" {
+  type = "agent"
+  command = [
+    "opencode",
+    "run",
+    "Follow the attached Bach reviewer prompt.",
+    "--file",
+    "$BACH_AGENT_PROMPT_PATH",
+  ]
+}
+
+prompt "implementer" {
+  path        = "prompts/agents/implementer.md"
+  description = "Default implementation instructions"
+}
+
+prompt "architecture_review" {
+  path        = "prompts/agents/architecture-review.md"
+  description = "Architecture review instructions"
+}
+
+prompt "docs_sweeper" {
+  path        = "prompts/agents/docs-sweeper.md"
+  description = "Documentation review instructions"
+}
+
+prompt "security_review" {
+  path        = "prompts/agents/security-review.md"
+  description = "Security review instructions"
+}
+
+prompt "merge" {
+  path        = "prompts/agents/merge.md"
+  description = "Merge agent instructions"
+}
+
+agent "architecture_review" {
+  description = "Review plan work for architectural fit"
+  mode        = "review"
+  provider    = provider.opencode_review
+  role        = "architecture-reviewer"
+  prompt      = prompt.architecture_review
+}
+
+agent "docs_sweeper" {
+  description = "Review plan work for documentation impact"
+  mode        = "review"
+  provider    = provider.opencode_review
+  role        = "docs-sweeper"
+  prompt      = prompt.docs_sweeper
+}
+
+agent "security_review" {
+  description = "Review plan work for security risks"
+  mode        = "review"
+  provider    = provider.opencode_review
+  role        = "security-reviewer"
+  prompt      = prompt.security_review
+}
+
+policy "merge_review" {
+  reviewers = [
+    agent.architecture_review,
+    agent.docs_sweeper,
+    agent.security_review,
+  ]
+
+  quality_gate {
+    metric = "findings.error.open.count"
+    max    = 0
+  }
+}
+
+agent "phase_12_agent_report_cli" {
+  description = "Implement phase 12: bach report helper CLI"
+  mode        = "implement"
+  provider    = provider.opencode
+  role        = "implementer"
+  prompt      = prompt.implementer
+  plan        = "plans/phase-12-agent-report-cli.md"
+  policy      = policy.merge_review
+
+  improve {
+    max_attempts = 2
+    until        = "policy.passed"
+  }
+
+  workspace {
+    mode = "clone"
+    path = ".bach/agents/phase-12-agent-report-cli-r3"
+  }
+
+  git {
+    branch = "bach/phase-12-agent-report-cli-r3"
+    commit = "required"
+  }
+}
+
+agent "merge_phase_12_agent_report_cli" {
+  description = "Merge phase 12 after reviewer policy passes"
+  mode        = "merge"
+  provider    = provider.opencode
+  prompt      = prompt.merge
+  subject     = agent.phase_12_agent_report_cli
+}
+
+agent "phase_13_rego_report_policies" {
+  description = "Implement phase 13: Rego report policies"
+  mode        = "implement"
+  provider    = provider.opencode
+  role        = "implementer"
+  prompt      = prompt.implementer
+  plan        = "plans/phase-13-rego-report-policies.md"
+  policy      = policy.merge_review
+
+  improve {
+    max_attempts = 2
+    until        = "policy.passed"
+  }
+
+  workspace {
+    mode = "clone"
+    path = ".bach/agents/phase-13-rego-report-policies-r3"
+  }
+
+  git {
+    branch = "bach/phase-13-rego-report-policies-r3"
+    commit = "required"
+  }
+}
+
+agent "merge_phase_13_rego_report_policies" {
+  description = "Merge phase 13 after reviewer policy passes"
+  mode        = "merge"
+  provider    = provider.opencode
+  prompt      = prompt.merge
+  subject     = agent.phase_13_rego_report_policies
+}
+
+agent "phase_14_opencode_provider_sessions" {
+  description = "Implement phase 14: OpenCode provider sessions"
+  mode        = "implement"
+  provider    = provider.opencode
+  role        = "implementer"
+  prompt      = prompt.implementer
+  plan        = "plans/phase-14-opencode-provider-sessions.md"
+  policy      = policy.merge_review
+
+  improve {
+    max_attempts = 3
+    until        = "policy.passed"
+  }
+
+  workspace {
+    mode = "clone"
+    path = ".bach/agents/phase-14-opencode-provider-sessions"
+  }
+
+  git {
+    branch = "bach/phase-14-opencode-provider-sessions"
+    commit = "required"
+  }
+}
+
+agent "merge_phase_14_opencode_provider_sessions" {
+  description = "Merge phase 14 after reviewer policy passes"
+  mode        = "merge"
+  provider    = provider.opencode
+  prompt      = prompt.merge
+  subject     = agent.phase_14_opencode_provider_sessions
+}
+
+pipeline "next_plans" {
+  description = "Run the next implementation plans in order"
+  steps = [
+    agent.phase_14_opencode_provider_sessions,
+    agent.merge_phase_14_opencode_provider_sessions,
+  ]
+}

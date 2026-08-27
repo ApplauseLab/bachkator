@@ -118,6 +118,7 @@ type FactoryWorkItem struct {
 	Priority           model.Priority           `json:"priority"`
 	Labels             []string                 `json:"labels,omitempty"`
 	SourceType         string                   `json:"source_type"`
+	SourceID           string                   `json:"source_id,omitempty"`
 	DedupeKey          string                   `json:"dedupe_key,omitempty"`
 	SubmittedPlanPath  string                   `json:"submitted_plan_path,omitempty"`
 	SubmittedPlanHash  string                   `json:"submitted_plan_hash,omitempty"`

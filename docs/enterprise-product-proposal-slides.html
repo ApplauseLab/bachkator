@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enterprise Product Proposal Based on Bachkator</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --green: #00ff4e;
+      --green-soft: rgba(0, 255, 78, 0.18);
+      --green-faint: rgba(0, 255, 78, 0.08);
+      --surface: rgba(12, 14, 13, 0.76);
+      --black: #000;
+      --ink: #f5f5f5;
+      --muted: #9ca3af;
+      --panel: rgba(10, 10, 10, 0.82);
+      --line: rgba(255, 255, 255, 0.12);
+      --danger: #ff4d6d;
+      --warn: #ffd166;
+      --orange: #ff9f1c;
+      --blue: #7dd3fc;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--black);
+      color: var(--ink);
+      font-family: 'JetBrains Mono', monospace;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 82% 12%, rgba(0, 255, 78, 0.16), transparent 28%),
+        radial-gradient(circle at 10% 88%, rgba(0, 255, 78, 0.08), transparent 32%),
+        linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+      background-size: auto, auto, 42px 42px, 42px 42px;
+    }
+
+    .deck {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: 56px 72px;
+      display: none;
+      grid-template-rows: auto 1fr auto;
+      gap: 32px;
+    }
+
+    .slide.active { display: grid; }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 184px;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 0 20px rgba(0, 255, 78, 0.18));
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 28px;
+      max-width: 1180px;
+    }
+
+    .center { align-items: center; text-align: center; margin: 0 auto; }
+    .wide { max-width: 1320px; }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      font-size: clamp(54px, 6.5vw, 94px);
+      line-height: 0.96;
+      letter-spacing: -0.055em;
+      font-weight: 800;
+    }
+
+    h2 {
+      font-size: clamp(42px, 5vw, 72px);
+      line-height: 1.02;
+      letter-spacing: -0.05em;
+      font-weight: 800;
+    }
+
+    h3 {
+      font-size: 24px;
+      line-height: 1.25;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .eyebrow {
+      color: var(--green);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      font-size: clamp(21px, 2.3vw, 32px);
+      line-height: 1.38;
+      color: #d1d5db;
+      max-width: 980px;
+    }
+
+    .green { color: var(--green); }
+    .muted { color: var(--muted); }
+
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.024));
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 24px;
+      min-height: 176px;
+      box-shadow: 0 20px 70px rgba(0,0,0,0.28);
+    }
+
+    .card.glow {
+      border-color: rgba(0, 255, 78, 0.24);
+      box-shadow: 0 0 24px rgba(0, 255, 78, 0.08), 0 20px 70px rgba(0,0,0,0.32);
+    }
+
+    .card-title {
+      color: var(--green);
+      font-size: 19px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .card p, .card li {
+      color: #d1d5db;
+      font-size: 17px;
+      line-height: 1.52;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 14px;
+    }
+
+    li::before {
+      content: "■";
+      color: var(--green);
+      margin-right: 10px;
+      font-size: 13px;
+    }
+
+    .statement {
+      border-left: 8px solid var(--green);
+      padding: 20px 0 20px 28px;
+      font-size: clamp(28px, 3.4vw, 52px);
+      line-height: 1.12;
+      letter-spacing: -0.055em;
+      font-weight: 800;
+      max-width: 1120px;
+    }
+
+    .code {
+      background: rgba(0,0,0,0.72);
+      border: 1px solid rgba(0, 255, 78, 0.35);
+      border-radius: 18px;
+      padding: 24px;
+      color: #d1fae5;
+      font-size: 18px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      box-shadow: inset 0 0 24px rgba(0,255,78,0.05), 0 0 42px rgba(0,255,78,0.08);
+    }
+
+    .code.small {
+      font-size: 14px;
+      line-height: 1.45;
+      padding: 18px;
+    }
+
+    .code-label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      margin-bottom: -14px;
+      text-transform: uppercase;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .step {
+      background: var(--green-faint);
+      border: 1px solid rgba(0, 255, 78, 0.35);
+      border-radius: 18px;
+      padding: 18px;
+      min-height: 134px;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--green);
+      color: #000;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .step strong { display: block; font-size: 17px; margin-bottom: 8px; }
+    .step span { color: var(--muted); font-size: 14px; line-height: 1.4; }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 18px;
+    }
+
+    .verdict {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .verdict-label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .verdict-value {
+      color: var(--green);
+      font-size: 52px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.06em;
+      margin-bottom: 12px;
+    }
+
+    .verdict-copy {
+      color: #d1d5db;
+      font-size: 16px;
+      line-height: 1.55;
+      max-width: 360px;
+    }
+
+    .pill {
+      border: 1px solid rgba(0, 255, 78, 0.45);
+      color: var(--green);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      background: var(--green-faint);
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: rgba(255,255,255,0.42);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .progress {
+      height: 3px;
+      width: 220px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--green);
+      box-shadow: 0 0 20px rgba(0,255,78,0.8);
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1.35fr 0.65fr;
+      gap: 22px;
+      width: 100%;
+    }
+
+    .loop-panel {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .loop-step {
+      min-height: 138px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      background: rgba(0,0,0,0.28);
+      position: relative;
+    }
+
+    .loop-step::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -13px;
+      width: 12px;
+      height: 1px;
+      background: rgba(0,255,78,0.42);
+    }
+
+    .loop-step:last-child::after { display: none; }
+
+    .loop-kicker {
+      color: var(--muted);
+      display: block;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .loop-step strong {
+      display: block;
+      color: var(--ink);
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .loop-step p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .loop-step.active {
+      border-color: rgba(0,255,78,0.34);
+      background: rgba(0,255,78,0.075);
+    }
+
+    .signal-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .signal {
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(255,255,255,0.028);
+    }
+
+    .signal span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .signal strong {
+      color: var(--green);
+      font-size: 20px;
+    }
+
+    .chart {
+      height: 150px;
+      position: relative;
+      margin-top: 22px;
+      padding: 12px 0 0;
+      border-left: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background:
+        linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px);
+      background-size: 100% 25%, 20% 100%;
+    }
+
+    .chart svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .legend {
+      display: flex;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 28px;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 11px;
+      height: 11px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 14px currentColor;
+    }
+
+    .legend .orange::before { background: var(--orange); }
+
+    .axis-labels {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -26px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .evidence-table {
+      display: grid;
+      gap: 0;
+      margin-top: 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.24);
+    }
+
+    .evidence-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1.5fr;
+      gap: 18px;
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      color: #d1d5db;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .evidence-row:last-child { border-bottom: 0; }
+
+    .evidence-row.header {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.035);
+    }
+
+    .status-pass { color: var(--green); }
+    .status-fail { color: var(--orange); }
+
+    @media print {
+      html, body { overflow: visible; }
+      .deck { height: auto; }
+      .slide { position: relative; display: grid !important; width: 100vw; height: 100vh; page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="deck">
+    <section class="slide active">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>Enterprise proposal</span></div>
+      <div class="content">
+        <div class="eyebrow">Based on Bachkator</div>
+        <h1>Turn vague feature requests into polished product.</h1>
+        <p class="subtitle">Describe the outcome. Bach coordinates the agents, reviews, and gates until it is ready to ship.</p>
+      </div>
+      <div class="footer"><span>Enterprise Product Proposal</span><div class="progress"><span></span></div><span>01</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>The problem</span></div>
+      <div class="content wide">
+        <h2>Enterprises do not need more demos. They need control.</h2>
+        <div class="grid-3">
+          <div class="card"><div class="card-title">Agents say “done”</div><p>But teams still need proof: tests, security, plan coverage, architecture compliance, and merge hygiene.</p></div>
+          <div class="card"><div class="card-title">CI is too narrow</div><p>Traditional pipelines verify commands. They do not verify whether the agent fulfilled intent.</p></div>
+          <div class="card"><div class="card-title">Governance is missing</div><p>Security and platform teams need standardized policies, audit trails, and cross-repo visibility.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Agents need evidence</span><div class="progress"><span></span></div><span>02</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>Thesis</span></div>
+      <div class="content">
+        <p class="statement">Agents should not decide when they are done. Your company policy should.</p>
+        <p class="subtitle">Bachkator becomes the orchestration and evidence layer between natural-language software intent and production-ready code.</p>
+      </div>
+      <div class="footer"><span>Policy over vibes</span><div class="progress"><span></span></div><span>03</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>Operating model</span></div>
+      <div class="content wide">
+        <h2>Self-improving spec development.</h2>
+        <p class="subtitle">The spec is not a static document. Every agent attempt, reviewer finding, policy failure, and merge outcome feeds back into better prompts, stronger policies, and clearer plans.</p>
+        <div class="grid-2">
+          <div class="card glow"><div class="card-title">Opinionated spec-driven development</div><ul><li>Plan-first workflow</li><li>Built-in implementation, review, and merge lanes</li><li>Default policies for tests, docs, security, architecture, and acceptance</li><li>Automatic retries until the spec and policy pass</li></ul></div>
+          <div class="card"><div class="card-title">DIY enterprise mode</div><ul><li>Bring your own prompts and reviewer agents</li><li>Import company policies from a central registry</li><li>Plug in internal security, compliance, and architecture checks</li><li>Tune thresholds by repo, team, risk level, or release type</li></ul></div>
+        </div>
+      </div>
+      <div class="footer"><span>Two modes of operandi</span><div class="progress"><span></span></div><span>04</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>1. Agents first-class</span></div>
+      <div class="content wide">
+        <h2>Agents become a native delivery primitive.</h2>
+        <div class="grid-2">
+          <div class="code">agent "checkout_refactor" {
+  provider = opencode
+  role     = "implementer"
+
+  plan   = "plans/checkout.md"
+  branch = "agents/checkout"
+  policy = policy.merge
+
+  retry {
+    attempts = 5
+    until    = policy.passes
+  }
+}</div>
+          <div class="card glow"><div class="card-title">What this buys</div><ul><li>Branch and workspace isolation</li><li>Session resume and retry semantics</li><li>Structured reports instead of magic log markers</li><li>Audit-ready run history for every attempt</li></ul></div>
+        </div>
+      </div>
+      <div class="footer"><span>Agent targets</span><div class="progress"><span></span></div><span>05</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>2. Company policy</span></div>
+      <div class="content wide">
+        <h2>Every company brings its own definition of “ready”.</h2>
+        <div class="grid-2">
+          <div class="code">import "@acme/bach-policies/merge@v4"
+import "@acme/bach-prompts/security@v2"
+
+policy "merge" {
+  type = "quality"
+
+  reviewer "security" {
+    provider = opencode
+    prompt   = prompt.security_review
+  }
+
+  quality_gate {
+    metric = "security.high.count"
+    max    = 0
+  }
+}</div>
+          <div class="card"><div class="card-title">Enterprise product surface</div><ul><li>Policy registry and versioning</li><li>Prompt packages with approvals</li><li>Reusable reviewer agents</li><li>Compliance-grade gate history</li></ul></div>
+        </div>
+      </div>
+      <div class="footer"><span>Company-owned standards</span><div class="progress"><span></span></div><span>06</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>3. Parameterized prompts</span></div>
+      <div class="content wide">
+        <h2>Prompts become governed, reusable infrastructure.</h2>
+        <div class="grid-2">
+          <div class="code">prompt "plan_review" {
+  param "plan"
+  param "branch"
+  param "diff"
+
+  body = &lt;&lt;EOF
+Compare the branch against ${param.plan}.
+Find missing scope, tests, docs,
+and unresolved questions.
+Emit Bach quality findings only.
+EOF
+}</div>
+          <div class="card glow"><div class="card-title">Why enterprises care</div><p>Security, architecture, compliance, and product teams can standardize how agents review work without touching application repos.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Prompt governance</span><div class="progress"><span></span></div><span>07</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>4. Central dashboard</span></div>
+      <div class="content wide">
+        <h2>Every improvement loop leaves evidence.</h2>
+        <div class="dashboard">
+          <div class="card glow">
+            <div class="card-title">Improvement loop</div>
+            <div class="loop-panel">
+              <div class="loop-step"><span class="loop-kicker">01</span><strong>Spec</strong><p>Turn the request into acceptance criteria, scope, risks, and tests.</p></div>
+              <div class="loop-step"><span class="loop-kicker">02</span><strong>Build</strong><p>Implementation agents work in isolated branches and write reports.</p></div>
+              <div class="loop-step active"><span class="loop-kicker">03</span><strong>Review</strong><p>Policy reviewers produce normalized findings and gate results.</p></div>
+              <div class="loop-step"><span class="loop-kicker">04</span><strong>Improve</strong><p>Agents fix unresolved findings until the merge policy passes.</p></div>
+            </div>
+            <div class="signal-strip">
+              <div class="signal"><span>Open findings</span><strong>0 blocking</strong></div>
+              <div class="signal"><span>Policy</span><strong>merge@v8</strong></div>
+              <div class="signal"><span>Decision</span><strong>ready</strong></div>
+            </div>
+            <div class="evidence-table">
+              <div class="evidence-row header"><span>Attempt</span><span>Open</span><span>Gate</span><span>Next action</span></div>
+              <div class="evidence-row"><span>Spec draft</span><span class="status-fail">7 findings</span><span class="status-fail">failed</span><span>Add acceptance criteria</span></div>
+              <div class="evidence-row"><span>Implementation</span><span class="status-fail">3 findings</span><span class="status-fail">failed</span><span>Fix tests and auth gap</span></div>
+              <div class="evidence-row"><span>Retry</span><span class="status-pass">0 findings</span><span class="status-pass">passed</span><span>Ready for merge queue</span></div>
+            </div>
+          </div>
+          <div class="card verdict">
+            <div>
+              <div class="verdict-label">Merge verdict</div>
+              <div class="verdict-value">Ready</div>
+              <p class="verdict-copy">The branch has no blocking findings, required reviewers passed, and the evidence is stored for audit.</p>
+            </div>
+            <div>
+              <div class="metric-row"><span>Policy</span><span class="pill">merge@v8</span></div>
+              <div class="metric-row"><span>Reviewers</span><span class="pill">3 agents</span></div>
+              <div class="metric-row"><span>Open blockers</span><span class="pill">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Visibility layer</span><div class="progress"><span></span></div><span>08</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>5. Natural language to delivery</span></div>
+      <div class="content wide">
+        <h2>Describe what you want. Get a production-ready branch in X time.</h2>
+        <div class="flow">
+          <div class="step"><span class="step-num">1</span><strong>Describe</strong><span>“Refactor checkout to support split shipments.”</span></div>
+          <div class="step"><span class="step-num">2</span><strong>Plan</strong><span>Bach creates or imports a scoped delivery plan.</span></div>
+          <div class="step"><span class="step-num">3</span><strong>Implement</strong><span>Agent works in an isolated branch/workspace.</span></div>
+          <div class="step"><span class="step-num">4</span><strong>Review</strong><span>Company reviewer agents produce findings.</span></div>
+          <div class="step"><span class="step-num">5</span><strong>Retry</strong><span>Bach loops until policy passes or timebox expires.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Intent to branch</span><div class="progress"><span></span></div><span>09</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>6. Policy-certified generation</span></div>
+      <div class="content wide">
+        <h2>Generate workflows that already know company rules.</h2>
+        <div class="grid-2">
+          <div>
+            <div class="code-label">CLI</div>
+            <div class="code small">bach generate workflow \
+  --feature "split shipments in checkout" \
+  --org applause \
+  --risk-profile payments \
+  --policy applause/merge@v8 \
+  --prompt-pack applause/platform@v12 \
+  --certify</div>
+          </div>
+          <div class="card glow"><div class="card-title">Generated evidence</div><ul><li>Spec with acceptance criteria</li><li>Bachfile agent workflow</li><li>Required reviewer policy bindings</li><li>Risk-specific test matrix</li><li>Owner and approval requirements</li></ul></div>
+        </div>
+        <div class="code small">Certification:
+✓ uses applause/policy.merge@v8
+✓ requires security_review@v4 for payments risk
+✓ includes regression tests for partial fulfillment
+✓ blocks merge until unresolved findings = 0</div>
+      </div>
+      <div class="footer"><span>Company-aware generation</span><div class="progress"><span></span></div><span>10</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>7. Multi-feature workflows</span></div>
+      <div class="content wide">
+        <h2>Generate an execution graph, not a pile of prompts.</h2>
+        <div class="grid-2">
+          <div class="code small">bach generate batch \
+  --epic "checkout modernization" \
+  --feature "split shipments" \
+  --feature "refund retry ledger" \
+  --feature "fraud review queue" \
+  --parallelize safe \
+  --merge serialized \
+  --policy applause/merge@v8</div>
+          <div class="code small">group "implement_checkout_epic" {
+  targets = [
+    "agent/split_shipments",
+    "agent/refund_retry_ledger",
+    "agent/fraud_review_queue",
+  ]
+}
+
+pipeline "merge_checkout_epic" {
+  steps = [
+    "agent/merge_split_shipments",
+    "agent/merge_refund_retry_ledger",
+    "agent/merge_fraud_review_queue",
+    "group/gate",
+  ]
+}</div>
+        </div>
+      </div>
+      <div class="footer"><span>Parallel agents, serialized risk</span><div class="progress"><span></span></div><span>11</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>8. Evidence database</span></div>
+      <div class="content wide">
+        <h2>The enterprise moat is the evidence graph.</h2>
+        <div class="grid-4">
+          <div class="card"><div class="card-title">Runs</div><p>Every agent attempt, reviewer pass, retry, merge, and gate result.</p></div>
+          <div class="card"><div class="card-title">Findings</div><p>Normalized severity, file, line, rule, owner, resolved state, and evidence.</p></div>
+          <div class="card"><div class="card-title">Policies</div><p>Which company policy version approved or rejected each branch.</p></div>
+          <div class="card"><div class="card-title">Outcomes</div><p>Cycle time, failure modes, merge readiness, escaped defects, and ROI.</p></div>
+        </div>
+        <p class="subtitle">OSS can run a workflow locally. Enterprise learns across every repo, spec, prompt, policy, reviewer, model, and delivery outcome.</p>
+      </div>
+      <div class="footer"><span>Audit trail plus learning loop</span><div class="progress"><span></span></div><span>12</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>9. Moat in code</span></div>
+      <div class="content wide">
+        <h2>Enterprise value is policy, memory, and certification.</h2>
+        <div class="grid-2">
+          <div class="code small">enterprise "applause" {
+  sync = true
+
+  registries {
+    policies = "applause/policies"
+    prompts  = "applause/prompts"
+    findings = "applause/evidence"
+  }
+
+  enforce {
+    require_certified_workflows = true
+    require_policy_version      = true
+    block_unapproved_prompts    = true
+  }
+}</div>
+          <div class="card glow"><div class="card-title">Why it compounds</div><ul><li>Every failed spec improves the next spec template</li><li>Every reviewer finding tunes prompt packs</li><li>Every policy miss becomes a policy recommendation</li><li>Every accepted branch creates benchmark data</li></ul></div>
+        </div>
+      </div>
+      <div class="footer"><span>Enterprise moat</span><div class="progress"><span></span></div><span>13</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>10. Enterprise modules</span></div>
+      <div class="content wide">
+        <h2>What makes it an enterprise product.</h2>
+        <div class="grid-3">
+          <div class="card"><div class="card-title">Governance</div><ul><li>SSO/RBAC</li><li>Prompt approvals</li><li>Policy change control</li><li>Audit exports</li></ul></div>
+          <div class="card"><div class="card-title">Operations</div><ul><li>Central runner fleet</li><li>Provider credentials</li><li>Cost controls</li><li>Workspace lifecycle</li></ul></div>
+          <div class="card"><div class="card-title">Delivery</div><ul><li>GitHub/GitLab checks</li><li>Reviewer bots</li><li>Merge queues</li><li>Release evidence</li></ul></div>
+        </div>
+      </div>
+      <div class="footer"><span>Enterprise-grade control plane</span><div class="progress"><span></span></div><span>14</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>11. Buyer story</span></div>
+      <div class="content wide">
+        <h2>Different buyers, one story: trust the process.</h2>
+        <div class="grid-3">
+          <div class="card glow"><div class="card-title">VP Engineering</div><p>“Increase throughput without lowering the bar for merge quality.”</p></div>
+          <div class="card glow"><div class="card-title">Platform</div><p>“Standardize agent workflows across every repo and team.”</p></div>
+          <div class="card glow"><div class="card-title">Security</div><p>“No agent-written code merges without review findings and gates.”</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Clear buyer alignment</span><div class="progress"><span></span></div><span>15</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>12. Packaging</span></div>
+      <div class="content wide">
+        <h2>Open-source wedge. Enterprise control plane.</h2>
+        <div class="grid-3">
+          <div class="card"><div class="card-title">OSS Bach</div><p>Local CLI, Bachfile targets, quality gates, reports, agent primitives.</p></div>
+          <div class="card"><div class="card-title">Team</div><p>Shared policies, hosted dashboards, GitHub checks, prompt registry.</p></div>
+          <div class="card"><div class="card-title">Enterprise</div><p>SSO, RBAC, private runners, audit exports, compliance workflows, org analytics.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Commercial path</span><div class="progress"><span></span></div><span>16</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="brand"><div class="brand-left"><img class="logo" src="../../../GitHub/applause/website/static/images/Logo-Custom-Dark-backup.svg" alt="ApplauseLab"></div><span>Close</span></div>
+      <div class="content center">
+        <div class="eyebrow">Product promise</div>
+        <h2>AI agents can write code. Bach decides whether it is shippable.</h2>
+        <p class="subtitle">Make agentic software delivery observable, policy-gated, and enterprise-safe.</p>
+      </div>
+      <div class="footer"><span>ApplauseLab x Bachkator</span><div class="progress"><span></span></div><span>17</span></div>
+    </section>
+  </main>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    let index = 0;
+
+    function show(next) {
+      index = Math.max(0, Math.min(slides.length - 1, next));
+      slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === index);
+        const progress = slide.querySelector('.progress span');
+        if (progress) progress.style.width = `${((i + 1) / slides.length) * 100}%`;
+      });
+      location.hash = `slide-${index + 1}`;
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (['ArrowRight', 'PageDown', ' '].includes(event.key)) show(index + 1);
+      if (['ArrowLeft', 'PageUp', 'Backspace'].includes(event.key)) show(index - 1);
+      if (event.key === 'Home') show(0);
+      if (event.key === 'End') show(slides.length - 1);
+    });
+
+    const match = location.hash.match(/slide-(\d+)/);
+    if (match) index = Number(match[1]) - 1;
+    show(index);
+  </script>
+</body>
+</html>

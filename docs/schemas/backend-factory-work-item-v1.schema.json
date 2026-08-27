@@ -29,6 +29,7 @@
     "priority": { "type": "string", "minLength": 1 },
     "labels": { "type": "array", "items": { "type": "string" } },
     "source_type": { "type": "string", "minLength": 1 },
+    "source_id": { "type": "string" },
     "dedupe_key": { "type": "string" },
     "submitted_plan_path": { "type": "string" },
     "submitted_plan_hash": { "type": "string" },

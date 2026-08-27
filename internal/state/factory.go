@@ -22,6 +22,7 @@ type FactoryWorkItem struct {
 	Priority           model.Priority
 	Labels             []string
 	SourceType         string
+	SourceID           string
 	DedupeKey          string
 	SubmittedPlanPath  string
 	SubmittedPlanHash  string
@@ -265,13 +266,13 @@ func insertFactoryWorkItem(tx *sql.Tx, item FactoryWorkItem) error {
 	_, err = tx.Exec(`
 		INSERT INTO factory_work_items (
 			id, factory, workflow, lifecycle, current_phase, title, body, body_hash,
-			priority, labels, source_type, dedupe_key, submitted_plan_path,
+			priority, labels, source_type, source_id, dedupe_key, submitted_plan_path,
 			submitted_plan_hash, intake_evidence_id, intake_evidence_uri,
 			intake_evidence_hash, metadata, created_at, updated_at, cancelled_at,
 			cancel_reason, claimed_by_daemon_id, claimed_at, claim_expires_at,
 			completed_at, failed_at, failure_phase, failure_message
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		item.ID,
 		item.Factory,
@@ -284,6 +285,7 @@ func insertFactoryWorkItem(tx *sql.Tx, item FactoryWorkItem) error {
 		item.Priority,
 		labels,
 		item.SourceType,
+		item.SourceID,
 		item.DedupeKey,
 		item.SubmittedPlanPath,
 		item.SubmittedPlanHash,
@@ -357,10 +359,14 @@ func findOpenFactoryWorkItemByDedupe(
 	dedupeKey string,
 ) (FactoryWorkItem, bool, error) {
 	var id string
+	// Dedupe must match every unfinished lifecycle. Restricting the lookup to
+	// 'pending' let gated items (waiting_approval) spawn duplicate work items
+	// whenever their external source was touched while the gate held them.
 	err := tx.QueryRow(`
 		SELECT id
 		FROM factory_work_items
-		WHERE factory = ? AND workflow = ? AND dedupe_key = ? AND lifecycle = 'pending'
+		WHERE factory = ? AND workflow = ? AND dedupe_key = ?
+		  AND lifecycle IN ('pending', 'claimed', 'running', 'waiting_approval')
 		ORDER BY created_at DESC
 		LIMIT 1
 	`, factory, workflow, dedupeKey).Scan(&id)
