@@ -190,3 +190,137 @@ Current lifecycle values are:
 - `cancelled`: manually cancelled before execution.
 
 Deferred Factory behavior includes retries, review queues, and replan loops.
+
+## Complete example: agent-driven todo factory
+
+A full workflow where agents plan, implement, and merge; humans approve every
+lane transition from the item PR; and the daemon polls GitHub for both intake
+(factory-labeled issues) and approvals:
+
+```hcl
+project "todo-dark-factory" {
+  root    = "."
+  default = "group.ci"
+}
+
+var "github_repo" {
+  default = "owner/your-demo-repo"
+}
+
+var "s3_bucket" {
+  default = "your-public-bucket"
+}
+
+provider "opencode" {
+  type = "opencode"
+}
+
+provider "opencode_run" {
+  type    = "agent"
+  command = ["opencode", "run"]
+}
+
+prompt "planner" {
+  path = "prompts/planner.md"
+}
+
+prompt "implementer" {
+  path = "prompts/implementer.md"
+}
+
+prompt "merge" {
+  path = "prompts/merge.md"
+}
+
+shell "server_test" {
+  command = ["bun", "test", "apps/server", "--reporter", "junit",
+             "--reporter-outfile", ".bach/artifacts/server-junit.xml"]
+  outputs = {
+    junit = ".bach/artifacts/server-junit.xml"
+  }
+}
+
+quality "shell.server_test" {
+  junit {
+    path   = shell.server_test.outputs.junit
+    format = "junit-xml"
+  }
+
+  quality_gate {
+    metric = "tests.failed"
+    max    = 0
+  }
+}
+
+agent_template "merger" {
+  mode     = "implement"
+  provider = provider.opencode
+  role     = "merger"
+  prompt   = prompt.merge
+}
+
+agent "architecture_review" {
+  mode     = "review"
+  provider = provider.opencode_run
+  role     = "architecture-reviewer"
+}
+
+factory "todo" {
+  workflow "ship" {
+    plan {
+      agent_template    = agent_template.planner
+      path              = "plans/factory/${work_item.id}.md"
+      requires_approval = true
+    }
+
+    implement {
+      agent_template    = agent_template.implementer
+      requires_approval = true
+    }
+
+    merge {
+      agent_template    = agent_template.merger
+      requires_approval = true
+    }
+
+    deploy "staging" {
+      target            = pipeline.release_lane
+      requires_approval = true
+    }
+
+    verify "staging" {
+      target = pipeline.verify_lane
+    }
+  }
+
+  triggers {
+    manual {}
+
+    provider "github" {
+      command       = ["bach-github-issue-trigger"]
+      poll_interval = "1m"
+      config = {
+        repo      = var.github_repo
+        labels    = "factory"
+        token_env = "GITHUB_TOKEN"
+      }
+    }
+  }
+
+  approvals {
+    provider "github" {
+      command       = ["bach-github-approval-provider"]
+      poll_interval = "30s"
+      config = {
+        repo      = var.github_repo
+        token_env = "GITHUB_TOKEN"
+        phases    = "plan,implement,merge,deploy.staging"
+      }
+    }
+  }
+}
+```
+
+The full runnable version — including the narrated-demo contracts, reviewer
+policy, and the local release and verify lanes — lives in the
+`bach-example-todo-factory` example repository.
