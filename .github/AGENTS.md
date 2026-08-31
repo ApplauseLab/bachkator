@@ -10,6 +10,7 @@
 - `actions/`: local composite actions shared by workflows in this repository.
 - `ISSUE_TEMPLATE/`: GitHub issue forms and issue-template chooser configuration.
 - `pull_request_template.md`: default pull request checklist for Bachkator changes.
+- `always-open-pr.md`: marker file for the intentionally long-lived example PR branch.
 
 ## Local Contracts
 
